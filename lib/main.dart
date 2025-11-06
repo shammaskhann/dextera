@@ -1,4 +1,5 @@
 import 'package:dextera/core/app_theme.dart';
+import 'package:dextera/screens/signuo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dextera/screens/onboarding_screen.dart';
@@ -37,6 +38,10 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    initController();
+  }
+
+  initController() async {
     // Extend total duration to allow a 1s initial pause before slide-out
     // New timeline: idle 0.0-1.0s, slide-out 1.0-2.6s (slower), shrink 2.6-3.1s, text-in 3.1-4.0s
     _controller = AnimationController(
@@ -50,7 +55,8 @@ class _SplashScreenState extends State<SplashScreen>
       parent: _controller,
       curve: Interval(1.0 / 4.0, 2.6 / 4.0, curve: Curves.easeInOut),
     );
-
+    //delay for 0.8 s so the geometric get loads
+    await Future.delayed(Duration(seconds: 1));
     // Auto-start
     _controller.forward();
 
