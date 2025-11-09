@@ -81,7 +81,7 @@ class SignupScreen extends StatelessWidget {
               // --- Google Button ---
               CustomButton(
                 label: "Continue with Google",
-                icon: SvgPicture.asset("assets/icons/google.svg", height: 20),
+                iconLink: "assets/icons/google.png",
                 onTap: () {},
                 isPrimary: false,
               ),

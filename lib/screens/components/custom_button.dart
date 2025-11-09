@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:dextera/core/app_theme.dart';
+import 'package:flutter_svg/svg.dart';
 
 class CustomButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool isPrimary;
-  final Widget? icon;
+  final String? iconLink;
 
   const CustomButton({
     super.key,
     required this.label,
     required this.onTap,
     this.isPrimary = true,
-    this.icon,
+    this.iconLink,
   });
 
   @override
@@ -34,7 +35,28 @@ class CustomButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (icon != null) ...[icon!, const SizedBox(width: 8)],
+            if (iconLink != null) ...[
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(6.0),
+                  child: Image.asset(iconLink!, fit: BoxFit.contain),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
             Text(
               label,
               style: TextStyle(

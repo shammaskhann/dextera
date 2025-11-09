@@ -1,6 +1,7 @@
 import 'package:dextera/core/app_theme.dart';
-import 'package:dextera/screens/signuo_screen.dart';
+import 'package:dextera/screens/signup_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dextera/screens/onboarding_screen.dart';
 import 'dart:math' as math;
@@ -15,10 +16,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(fontFamily: 'Manrope'),
-      debugShowCheckedModeBanner: false,
-      home: SplashScreen(),
+    return ScreenUtilInit(
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp(
+          theme: ThemeData(fontFamily: 'Manrope'),
+          debugShowCheckedModeBanner: false,
+          home: child,
+        );
+      },
+      child: const SplashScreen(),
     );
   }
 }

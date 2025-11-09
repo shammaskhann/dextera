@@ -360,7 +360,8 @@ import 'dart:math' as math;
 
 import 'package:dextera/core/app_theme.dart';
 import 'package:dextera/screens/components/animated_component.dart';
-import 'package:dextera/screens/signuo_screen.dart';
+import 'package:dextera/screens/login_screen.dart';
+import 'package:dextera/screens/signup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -497,7 +498,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               child: Wrap(
                                 spacing: 16,
                                 alignment: WrapAlignment.center,
-                                runAlignment: WrapAlignment.start,
+                                runAlignment: WrapAlignment.center,
                                 children: [
                                   // Get Started button (GestureDetector)
                                   Material(
@@ -513,8 +514,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                         // use pushReplacement if you don't want Onboarding kept in backstack
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
-                                            builder: (_) =>
-                                                const SignupScreen(),
+                                            builder: (_) => const LoginScreen(),
                                           ),
                                         );
                                       },
