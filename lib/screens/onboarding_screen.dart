@@ -485,36 +485,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
                         const SizedBox(height: 12),
 
-                        // Buttons below, centered under text
                         Align(
                           alignment: Alignment.topCenter,
-                          child: AnimatedBuilder(
-                            animation: _buttonsController,
-                            builder: (context, child) {
-                              final by = lerpDouble(
-                                0,
-                                dSize * 0.18,
-                                _buttonsSlide.value,
-                              )!;
-                              return Opacity(
-                                opacity: _buttonsOpacity.value,
-                                child: Transform.translate(
-                                  offset: Offset(0, by),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: Wrap(
-                              spacing: 16,
-                              alignment: WrapAlignment.center,
-                              runAlignment: WrapAlignment.start,
-                              children: [
-                                // Get Started button (GestureDetector)
-                                Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 8.0,
-                                  ),
-                                  child: Material(
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.18),
+                              end: Offset.zero,
+                            ).animate(_buttonsController),
+                            child: FadeTransition(
+                              opacity: _buttonsOpacity,
+                              child: Wrap(
+                                spacing: 16,
+                                alignment: WrapAlignment.center,
+                                runAlignment: WrapAlignment.start,
+                                children: [
+                                  // Get Started button (GestureDetector)
+                                  Material(
                                     color: Colors.transparent,
                                     child: GestureDetector(
                                       onTap: () async {
@@ -568,13 +554,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                       ),
                                     ),
                                   ),
-                                ),
 
-                                // Learn More
-                                _buildActionButton('Learn More', () {
-                                  debugPrint('Learn More tapped');
-                                }),
-                              ],
+                                  // Learn More
+                                  _buildActionButton('Learn More', () {
+                                    debugPrint('Learn More tapped');
+                                  }),
+                                ],
+                              ),
                             ),
                           ),
                         ),
