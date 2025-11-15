@@ -1,5 +1,7 @@
+import 'package:dextera/screens/home_chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_otp_text_field/flutter_otp_text_field.dart';
 import 'dart:math' as math;
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -17,15 +19,56 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final int otpLength = 6;
   final List<TextEditingController> controllers = [];
   final List<FocusNode> focusNodes = [];
+  final List<String> _previousTexts = [];
 
   @override
   void initState() {
     super.initState();
     for (int i = 0; i < otpLength; i++) {
-      controllers.add(TextEditingController());
+      final controller = TextEditingController();
+      controllers.add(controller);
       focusNodes.add(FocusNode());
+      _previousTexts.add('');
+
+      // Listen to controller changes for better web support
+      final index = i;
+      controller.addListener(() {
+        _onControllerChanged(index);
+      });
     }
   }
+
+  void _onControllerChanged(int index) {
+    if (_isPasting) return;
+
+    final controller = controllers[index];
+    final currentText = controller.text;
+    final previousText = _previousTexts[index];
+
+    // Update previous text
+    _previousTexts[index] = currentText;
+
+    // Detect if field became empty (backspace on filled field)
+    if (previousText.isNotEmpty && currentText.isEmpty) {
+      _handleFieldEmptied(index);
+      return;
+    }
+
+    // Prevent multiple characters (except during paste)
+    if (currentText.length > 1 && !_isPasting) {
+      final lastChar = currentText[currentText.length - 1];
+      if (RegExp(r'^[0-9]$').hasMatch(lastChar)) {
+        controller.text = lastChar;
+        controller.selection = TextSelection.collapsed(offset: 1);
+        _previousTexts[index] = lastChar;
+      } else {
+        controller.text = '';
+        _previousTexts[index] = '';
+      }
+    }
+  }
+
+  bool _isPasting = false;
 
   @override
   void dispose() {
@@ -38,56 +81,161 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     super.dispose();
   }
 
-  void _onChanged(String value, int index) {
-    if (value.isEmpty) return;
-    if (RegExp(r'^[0-9]$').hasMatch(value)) {
-      // move to next field if valid digit
+  /// Handles text changes including paste operations
+  void _handleTextChange(String value, int index) {
+    if (_isPasting) {
+      return; // Paste is handled separately
+    }
+
+    // Extract only digits from the input
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digitsOnly.isEmpty) {
+      // If empty, the field is already clear
+      return;
+    }
+
+    // Handle paste operation (multiple digits)
+    if (digitsOnly.length > 1) {
+      _handlePaste(digitsOnly, index);
+      return;
+    }
+
+    // Handle single digit input
+    final digit = digitsOnly.substring(0, 1);
+    if (controllers[index].text != digit) {
+      controllers[index].text = digit;
+      controllers[index].selection = TextSelection.collapsed(offset: 1);
+    }
+
+    // Move to next field if not last
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (index < otpLength - 1) {
         focusNodes[index + 1].requestFocus();
       } else {
+        // Last field filled, unfocus and verify
         focusNodes[index].unfocus();
+        _verifyOtp();
       }
-    } else {
-      // remove invalid input
-      controllers[index].clear();
-    }
+    });
   }
 
-  void _onKey(KeyEvent event, int index) {
-    if (event is! KeyDownEvent) return;
+  /// Handles paste of multiple digits
+  void _handlePaste(String digits, int startIndex) {
+    _isPasting = true;
+
+    // Distribute digits across fields starting from current index
+    int filledCount = 0;
+    for (int i = 0; i < digits.length && (startIndex + i) < otpLength; i++) {
+      final digit = digits[i];
+      controllers[startIndex + i].text = digit;
+      controllers[startIndex + i].selection = TextSelection.collapsed(
+        offset: 1,
+      );
+      _previousTexts[startIndex + i] = digit;
+      filledCount++;
+    }
+
+    // Calculate the next focus index
+    final nextIndex = startIndex + filledCount;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isPasting = false;
+      if (nextIndex < otpLength) {
+        // Move to next empty field
+        focusNodes[nextIndex].requestFocus();
+      } else {
+        // All fields filled, unfocus and verify
+        final lastIndex = otpLength - 1;
+        focusNodes[lastIndex].unfocus();
+        _verifyOtp();
+      }
+    });
+  }
+
+  /// Handles keyboard events (backspace, enter, etc.)
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event, int index) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
 
     // Handle backspace
-    if (event.logicalKey == LogicalKeyboardKey.backspace &&
-        controllers[index].text.isEmpty &&
-        index > 0) {
-      focusNodes[index - 1].requestFocus();
-      controllers[index - 1].clear();
+    if (event.logicalKey == LogicalKeyboardKey.backspace) {
+      if (controllers[index].text.isNotEmpty) {
+        // If field has text, let the default behavior clear it
+        // We'll handle moving back in the change listener if needed
+        return KeyEventResult.ignored; // Let TextField handle clearing
+      } else if (index > 0) {
+        // If field is empty, move to previous and select its text
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          focusNodes[index - 1].requestFocus();
+          controllers[index - 1].selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: controllers[index - 1].text.length,
+          );
+        });
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.handled;
     }
 
     // Handle enter key
     if (event.logicalKey == LogicalKeyboardKey.enter) {
       _verifyOtp();
+      return KeyEventResult.handled;
+    }
+
+    // Handle arrow keys for navigation
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft && index > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        focusNodes[index - 1].requestFocus();
+      });
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight &&
+        index < otpLength - 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        focusNodes[index + 1].requestFocus();
+      });
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  /// Handles when field becomes empty (after backspace on filled field)
+  void _handleFieldEmptied(int index) {
+    if (index > 0) {
+      // Move focus to previous field
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        focusNodes[index - 1].requestFocus();
+      });
     }
   }
 
   void _verifyOtp() {
     final otp = controllers.map((c) => c.text).join();
-    if (otp.length == otpLength) {
-      debugPrint("Entered OTP: $otp");
-      // Call your API or logic here
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Verifying $otp...")));
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please enter all digits.")));
-    }
+    //if (otp.length == otpLength) {
+    debugPrint("Entered OTP: $otp");
+    // Call your API or logic here
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text("Verifying $otp...")));
+    //naviagte to home
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => HomeChatScreen()),
+    );
+    // } else {
+    //   ScaffoldMessenger.of(
+    //     context,
+    //   ).showSnackBar(const SnackBar(content: Text("Please enter all digits.")));
+    // }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFF1E2430),
@@ -109,10 +257,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               Text(
                 "A One-Time Password has been sent to ${widget.email}\nEnter the 6 digit code to verify it’s really you",
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white,
-                  height: 1.4,
-                ),
+                style: TextStyle(color: Colors.white, height: 1.4),
               ),
               SizedBox(height: 25.h),
 
@@ -121,7 +266,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 builder: (context, constraints) {
                   final width = MediaQuery.of(context).size.width;
                   final height = MediaQuery.of(context).size.height;
-                  const horizontalPadding = 48.0; // matches outer Padding
+                  final horizontalPadding =
+                      width * 0.12; // matches outer Padding
                   const spacing = 19.0;
                   final availableWidth =
                       width - horizontalPadding - (otpLength - 1) * spacing;
@@ -134,90 +280,165 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     math.min(fieldSizeByWidth, fieldSizeByHeight),
                   );
 
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      otpLength,
-                      (index) => Padding(
-                        padding: EdgeInsets.symmetric(horizontal: spacing / 2),
-                        child: SizedBox(
-                          width: fieldSize,
-                          height: fieldSize,
-                          child: Focus(
-                            focusNode: focusNodes[index],
-                            onKeyEvent: (node, event) {
-                              _onKey(event, index);
-                              return KeyEventResult.handled;
-                            },
-                            child: TextField(
-                              controller: controllers[index],
-                              autofocus: index == 0,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: fieldSize * 0.45,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLength: 1,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              decoration: InputDecoration(
-                                counterText: '',
-                                filled: true,
-                                fillColor: const Color(0xFF485067),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    fieldSize * 0.12,
-                                  ),
-                                  borderSide: const BorderSide(
-                                    color: Colors.white12,
-                                    width: 1,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    fieldSize * 0.12,
-                                  ),
-                                  borderSide: const BorderSide(
-                                    color: Colors.white,
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                              onChanged: (val) => _onChanged(val, index),
+                  return OtpTextField(
+                    margin: EdgeInsets.only(right: 12),
+                    numberOfFields: 6,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    //fieldHeight: fieldSizeByHeight,
+                    fieldWidth: fieldSizeByWidth,
+
+                    borderColor: Colors.white,
+                    textStyle: TextStyle(
+                      color: Colors.white,
+                      fontSize: fieldSize * 0.45,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    enabledBorderColor: Colors.white,
+                    //set to true to show as box or false to show as dash
+                    showFieldAsBox: true,
+                    borderRadius: BorderRadius.circular(fieldSize * 0.12),
+                    //runs when a code is typed in
+                    onCodeChanged: (String code) {
+                      //handle validation or checks here
+                    },
+                    //runs when every textfield is filled
+                    onSubmit: (String verificationCode) {
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text("Verification Code"),
+                            content: Text('Code entered is $verificationCode'),
+                          );
+                        },
+                      );
+                    }, // end onSubmit
+                  );
+
+                  // return Row(
+                  //   mainAxisAlignment: MainAxisAlignment.center,
+                  //   children: List.generate(
+                  //     otpLength,
+                  //     (index) => Padding(
+                  //       padding: EdgeInsets.symmetric(horizontal: spacing / 2),
+                  //       child: SizedBox(
+                  //         width: fieldSize,
+                  //         height: fieldSize,
+                  //         child: Focus(
+                  //           focusNode: focusNodes[index],
+                  //           autofocus: index == 0,
+                  //           onKeyEvent: (node, event) {
+                  //             return _handleKeyEvent(node, event, index);
+                  //           },
+                  //           child: TextField(
+                  //             controller: controllers[index],
+                  //             textAlign: TextAlign.center,
+                  //             style: TextStyle(
+                  //               color: Colors.white,
+                  //               fontSize: fieldSize * 0.45,
+                  //               fontWeight: FontWeight.w600,
+                  //             ),
+                  //             keyboardType: TextInputType.number,
+                  //             textInputAction: index < otpLength - 1
+                  //                 ? TextInputAction.next
+                  //                 : TextInputAction.done,
+                  //             inputFormatters: [
+                  //               FilteringTextInputFormatter.digitsOnly,
+                  //               LengthLimitingTextInputFormatter(6),
+                  //             ],
+                  //             decoration: InputDecoration(
+                  //               counterText: '',
+                  //               filled: true,
+                  //               fillColor: const Color(0xFF485067),
+                  //               border: OutlineInputBorder(
+                  //                 borderRadius: BorderRadius.circular(
+                  //                   fieldSize * 0.12,
+                  //                 ),
+                  //                 borderSide: const BorderSide(
+                  //                   color: Colors.white12,
+                  //                   width: 1,
+                  //                 ),
+                  //               ),
+                  //               focusedBorder: OutlineInputBorder(
+                  //                 borderRadius: BorderRadius.circular(
+                  //                   fieldSize * 0.12,
+                  //                 ),
+                  //                 borderSide: const BorderSide(
+                  //                   color: Colors.white,
+                  //                   width: 1.5,
+                  //                 ),
+                  //               ),
+                  //             ),
+                  //             onChanged: (val) => _handleTextChange(val, index),
+                  //             onSubmitted: (_) {
+                  //               if (index < otpLength - 1) {
+                  //                 focusNodes[index + 1].requestFocus();
+                  //               } else {
+                  //                 _verifyOtp();
+                  //               }
+                  //             },
+                  //           ),
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // );
+                },
+              ),
+              const SizedBox(height: 32),
+
+              /// Verify button (responsive Container)
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  final screenHeight = MediaQuery.of(context).size.height;
+
+                  // Determine whether we're on a narrow/mobile layout
+                  final isMobile = screenWidth < 700;
+
+                  // Button width: on mobile take a large fraction, on wide screens cap it
+                  final buttonWidth = isMobile
+                      ? math.min(constraints.maxWidth, screenWidth * 0.78)
+                      : math.min(420.0, constraints.maxWidth * 0.45);
+
+                  // Button height: use a responsive fraction of height with a sensible min
+                  final buttonHeight = math.max(
+                    48.0,
+                    screenHeight * (isMobile ? 0.065 : 0.045),
+                  );
+
+                  return Center(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(28),
+                      onTap: _verifyOtp,
+                      child: Container(
+                        width: buttonWidth,
+                        height: buttonHeight,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              offset: const Offset(0, 4),
+                              blurRadius: 8,
                             ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          "Verify",
+                          style: TextStyle(
+                            color: const Color(0xFF1E2430),
+                            fontWeight: FontWeight.w600,
+                            fontSize: math.max(14.0, buttonHeight * 0.34),
                           ),
                         ),
                       ),
                     ),
                   );
                 },
-              ),
-              const SizedBox(height: 32),
-
-              /// Verify button
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 64,
-                    vertical: 14,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                onPressed: _verifyOtp,
-                child: const Text(
-                  "Verify",
-                  style: TextStyle(
-                    color: Color(0xFF1E2430),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
               ),
               const SizedBox(height: 16),
 
