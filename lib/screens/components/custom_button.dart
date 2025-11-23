@@ -1,26 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:dextera/core/app_theme.dart';
-import 'package:flutter_svg/svg.dart';
 
 class CustomButton extends StatelessWidget {
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool isPrimary;
   final String? iconLink;
+  final bool isLoading;
 
   const CustomButton({
     super.key,
     required this.label,
-    required this.onTap,
+    this.onTap,
     this.isPrimary = true,
     this.iconLink,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     return InkWell(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         width: width * 0.6,
@@ -35,7 +36,19 @@ class CustomButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (iconLink != null) ...[
+            if (isLoading) ...[
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isPrimary ? backgroundClr : whiteClr,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ] else if (iconLink != null) ...[
               Container(
                 width: 32,
                 height: 32,

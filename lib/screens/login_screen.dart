@@ -1,19 +1,24 @@
 import 'package:dextera/screens/components/custom_button.dart';
 import 'package:dextera/screens/components/custom_textfield.dart';
-import 'package:dextera/screens/otp_verify_screen.dart';
 import 'package:dextera/screens/signup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:dextera/core/app_theme.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:dextera/controllers/login_controller.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
+  State<LoginScreen> createState() => _LoginScreenState();
+}
 
+class _LoginScreenState extends State<LoginScreen> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final _controller = LoginController();
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundClr,
       body: Center(
@@ -59,17 +64,22 @@ class LoginScreen extends StatelessWidget {
                 const SizedBox(height: 25),
 
                 // --- Continue Button ---
-                CustomButton(
-                  label: "Continue",
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            OtpVerificationScreen(email: emailController.text),
-                      ),
+                ListenableBuilder(
+                  listenable: _controller,
+                  builder: (context, _) {
+                    return CustomButton(
+                      label: "Continue",
+                      onTap: () {
+                        _controller.login(
+                          emailController.text.trim(),
+                          passwordController.text,
+                          context,
+                        );
+                      },
+                      isPrimary: true,
+                      isLoading: _controller.isLoading,
                     );
                   },
-                  isPrimary: true,
                 ),
 
                 const SizedBox(height: 15),
@@ -138,5 +148,13 @@ class LoginScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    _controller.dispose();
+    super.dispose();
   }
 }

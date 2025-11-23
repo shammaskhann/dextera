@@ -2,17 +2,24 @@ import 'package:dextera/screens/components/custom_button.dart';
 import 'package:dextera/screens/components/custom_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:dextera/core/app_theme.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:dextera/controllers/signup_controller.dart';
 
-class SignupScreen extends StatelessWidget {
+class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    final confirmController = TextEditingController();
+  State<SignupScreen> createState() => _SignupScreenState();
+}
 
+class _SignupScreenState extends State<SignupScreen> {
+  final usernameController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmController = TextEditingController();
+  final _controller = SignupController();
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundClr,
       body: Center(
@@ -44,6 +51,7 @@ class SignupScreen extends StatelessWidget {
               const SizedBox(height: 40),
 
               // --- Text fields ---
+              CustomTextField(hint: "Username", controller: usernameController),
               CustomTextField(
                 hint: "Email Address",
                 controller: emailController,
@@ -61,7 +69,25 @@ class SignupScreen extends StatelessWidget {
               const SizedBox(height: 25),
 
               // --- Continue Button ---
-              CustomButton(label: "Continue", onTap: () {}, isPrimary: true),
+              ListenableBuilder(
+                listenable: _controller,
+                builder: (context, _) {
+                  return CustomButton(
+                    label: "Continue",
+                    onTap: () {
+                      _controller.register(
+                        usernameController.text.trim(),
+                        emailController.text.trim(),
+                        passwordController.text,
+                        confirmController.text,
+                        context,
+                      );
+                    },
+                    isPrimary: true,
+                    isLoading: _controller.isLoading,
+                  );
+                },
+              ),
 
               const SizedBox(height: 25),
 
@@ -108,5 +134,15 @@ class SignupScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmController.dispose();
+    _controller.dispose();
+    super.dispose();
   }
 }

@@ -1,4 +1,4 @@
-import 'package:dextera/screens/home_chat_screen.dart';
+import 'package:dextera/controllers/otp_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_otp_text_field/flutter_otp_text_field.dart';
@@ -20,6 +20,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final List<TextEditingController> controllers = [];
   final List<FocusNode> focusNodes = [];
   final List<String> _previousTexts = [];
+  final _otpController = OtpController();
+  String _enteredOtp = '';
 
   @override
   void initState() {
@@ -78,6 +80,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     for (final f in focusNodes) {
       f.dispose();
     }
+    _otpController.dispose();
     super.dispose();
   }
 
@@ -214,23 +217,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   void _verifyOtp() {
-    final otp = controllers.map((c) => c.text).join();
-    //if (otp.length == otpLength) {
-    debugPrint("Entered OTP: $otp");
-    // Call your API or logic here
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("Verifying $otp...")));
-    //naviagte to home
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => HomeChatScreen()),
-    );
-    // } else {
-    //   ScaffoldMessenger.of(
-    //     context,
-    //   ).showSnackBar(const SnackBar(content: Text("Please enter all digits.")));
-    // }
+    final otp = _enteredOtp.isNotEmpty
+        ? _enteredOtp
+        : controllers.map((c) => c.text).join();
+
+    if (otp.length == otpLength) {
+      _otpController.verifyOtp(widget.email, otp, context);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please enter all digits.")));
+    }
   }
 
   @override
@@ -279,14 +276,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     48.0,
                     math.min(fieldSizeByWidth, fieldSizeByHeight),
                   );
-
                   return OtpTextField(
                     margin: EdgeInsets.only(right: 12),
                     numberOfFields: 6,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     //fieldHeight: fieldSizeByHeight,
                     fieldWidth: fieldSizeByWidth,
-
                     borderColor: Colors.white,
                     textStyle: TextStyle(
                       color: Colors.white,
@@ -299,19 +294,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     borderRadius: BorderRadius.circular(fieldSize * 0.12),
                     //runs when a code is typed in
                     onCodeChanged: (String code) {
-                      //handle validation or checks here
+                      _enteredOtp = code;
                     },
                     //runs when every textfield is filled
                     onSubmit: (String verificationCode) {
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: Text("Verification Code"),
-                            content: Text('Code entered is $verificationCode'),
-                          );
-                        },
-                      );
+                      _enteredOtp = verificationCode;
+                      _verifyOtp();
                     }, // end onSubmit
                   );
 
@@ -407,52 +395,91 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     screenHeight * (isMobile ? 0.065 : 0.045),
                   );
 
-                  return Center(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(28),
-                      onTap: _verifyOtp,
-                      child: Container(
-                        width: buttonWidth,
-                        height: buttonHeight,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
+                  return ListenableBuilder(
+                    listenable: _otpController,
+                    builder: (context, _) {
+                      return Center(
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              offset: const Offset(0, 4),
-                              blurRadius: 8,
+                          onTap: _otpController.isLoading ? null : _verifyOtp,
+                          child: Container(
+                            width: buttonWidth,
+                            height: buttonHeight,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  offset: const Offset(0, 4),
+                                  blurRadius: 8,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          "Verify",
-                          style: TextStyle(
-                            color: const Color(0xFF1E2430),
-                            fontWeight: FontWeight.w600,
-                            fontSize: math.max(14.0, buttonHeight * 0.34),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: _otpController.isLoading
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor:
+                                          const AlwaysStoppedAnimation<Color>(
+                                            Color(0xFF1E2430),
+                                          ),
+                                    ),
+                                  )
+                                : Text(
+                                    "Verify",
+                                    style: TextStyle(
+                                      color: const Color(0xFF1E2430),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: math.max(
+                                        14.0,
+                                        buttonHeight * 0.34,
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   );
                 },
               ),
               const SizedBox(height: 16),
 
               /// Resend code
-              TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Resending code...")),
+              ListenableBuilder(
+                listenable: _otpController,
+                builder: (context, _) {
+                  return TextButton(
+                    onPressed: _otpController.isResending
+                        ? null
+                        : () {
+                            _otpController.resendOtp(widget.email, context);
+                          },
+                    child: _otpController.isResending
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white70,
+                              ),
+                            ),
+                          )
+                        : const Text(
+                            "Resend Code",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 15,
+                            ),
+                          ),
                   );
                 },
-                child: const Text(
-                  "Resend Code",
-                  style: TextStyle(color: Colors.white70, fontSize: 15),
-                ),
               ),
             ],
           ),
