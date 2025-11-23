@@ -42112,7 +42112,7 @@ Az(a){return this.aqf(a)},
 aqf(a){var s=0,r=A.Q(t.bc),q,p=2,o=[],n,m,l,k,j,i,h
 var $async$Az=A.R(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
-k=A.fz("https://dexter-backend-springboot-postgre-production.up.railway.app/api/auth/register")
+k=A.fz("http://localhost:8080/api/auth/register")
 j=t.N
 j=A.ar(["Content-Type","application/json"],j,j)
 s=7
@@ -42151,7 +42151,7 @@ zS(a){return this.ao8(a)},
 ao8(a){var s=0,r=A.Q(t.DF),q,p=2,o=[],n,m,l,k,j,i,h,g,f
 var $async$zS=A.R(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
-n=A.fz("https://dexter-backend-springboot-postgre-production.up.railway.app/api/auth/login")
+n=A.fz("http://localhost:8080/api/auth/login")
 A.ry(J.ce(n))
 j=t.N
 j=A.ar(["Content-Type","application/json"],j,j)
@@ -42198,7 +42198,7 @@ B0(a){return this.arl(a)},
 arl(a){var s=0,r=A.Q(t.bc),q,p=2,o=[],n,m,l,k,j,i,h
 var $async$B0=A.R(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
-k=A.fz("https://dexter-backend-springboot-postgre-production.up.railway.app/api/auth/verify-otp")
+k=A.fz("http://localhost:8080/api/auth/verify-otp")
 j=t.N
 j=A.ar(["Content-Type","application/json"],j,j)
 s=7
@@ -42237,7 +42237,7 @@ AI(a){return this.aqA(a)},
 aqA(a){var s=0,r=A.Q(t.bc),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$AI=A.R(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
-k=A.fz("https://dexter-backend-springboot-postgre-production.up.railway.app/api/auth/resend-otp")
+k=A.fz("http://localhost:8080/api/auth/resend-otp")
 j=t.N
 i=A.ar(["Content-Type","application/json"],j,j)
 s=7
