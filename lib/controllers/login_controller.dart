@@ -30,16 +30,22 @@ class LoginController extends ChangeNotifier {
     try {
       final request = LoginRequest(email: email, password: password);
       final response = await _authRepository.login(request);
-
+      // final response = LoginResponse(
+      //   status: true,
+      //   token: '1234567890',
+      //   message: 'Login successful',
+      // );
       _isLoading = false;
       notifyListeners();
 
       if (response.status && response.token.isNotEmpty) {
         // Navigate to OTP verification screen
         if (context.mounted) {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => HomeChatScreen()));
+          if (response.user?.verified ?? false == true) {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => HomeChatScreen()));
+          }
         }
       } else {
         _errorMessage = response.message;

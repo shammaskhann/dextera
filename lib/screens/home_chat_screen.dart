@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:dextera/core/app_theme.dart';
+import 'package:dextera/repository/chat_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -21,6 +23,9 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<_ChatMessage> _messages = [];
+  final ChatRepository _chatRepository = ChatRepository();
+  StreamSubscription<String>? _chatSub;
+  bool _isStreaming = false;
 
   // Drawer open state (for mobile/tablet). On desktop, we force it open.
   bool _drawerOpen = false;
@@ -43,6 +48,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
 
   @override
   void dispose() {
+    _chatSub?.cancel();
     _inputController.dispose();
     _scrollController.dispose();
     _drawerAnimController.dispose();
@@ -68,6 +74,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   }
 
   void _sendMessage() {
+    if (_isStreaming) return; // prevent overlapping requests
+
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
 
@@ -78,14 +86,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
 
     setState(() {
       _messages.add(_ChatMessage(text: text, isUser: true));
-      // Placeholder bot reply (simulate async reply)
-      _messages.add(
-        _ChatMessage(
-          text:
-              "This is a simulated assistant reply. You asked: \"$text\". (Make API call here)",
-          isUser: false,
-        ),
-      );
+      // Placeholder assistant message that will be populated by stream
+      _messages.add(_ChatMessage(text: '', isUser: false));
     });
 
     _inputController.clear();
@@ -95,7 +97,42 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       _openDrawer();
     }
 
-    // scroll to bottom after a frame
+    _scrollToBottom();
+
+    _startStreamResponse(text);
+  }
+
+  void _startStreamResponse(String prompt) {
+    _chatSub?.cancel();
+    _isStreaming = true;
+
+    // Index of the assistant message we just added
+    final assistantIndex = _messages.length - 1;
+
+    _chatSub = _chatRepository
+        .streamChat(prompt)
+        .listen(
+          (chunk) {
+            setState(() {
+              _messages[assistantIndex].text += chunk;
+            });
+            _scrollToBottom();
+          },
+          onError: (err) {
+            _isStreaming = false;
+            if (!mounted) return;
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Chat error: $err')));
+          },
+          onDone: () {
+            _isStreaming = false;
+          },
+          cancelOnError: true,
+        );
+  }
+
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -630,7 +667,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
 }
 
 class _ChatMessage {
-  final String text;
+  String text;
   final bool isUser;
   _ChatMessage({required this.text, required this.isUser});
 }
