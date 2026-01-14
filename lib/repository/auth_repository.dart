@@ -18,7 +18,6 @@ class AuthRepository {
       if (response.statusCode == 200) {
         return ApiResponse.fromJson(jsonResponse);
       } else {
-        // Handle error response (e.g., 400 - Email already in use)
         return ApiResponse(
           status: jsonResponse['status'] ?? false,
           message: jsonResponse['message'] ?? 'Registration failed',

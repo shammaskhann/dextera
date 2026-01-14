@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:dextera/core/app_theme.dart';
+import 'package:dextera/models/chat_message.dart';
 import 'package:dextera/repository/chat_repository.dart';
+import 'package:dextera/screens/components/message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -22,7 +24,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<_ChatMessage> _messages = [];
+  final List<ChatMessage> _messages = [];
   final ChatRepository _chatRepository = ChatRepository();
   StreamSubscription<String>? _chatSub;
   bool _isStreaming = false;
@@ -85,9 +87,9 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     final wasEmpty = _messages.isEmpty;
 
     setState(() {
-      _messages.add(_ChatMessage(text: text, isUser: true));
+      _messages.add(ChatMessage(text: text, isUser: true));
       // Placeholder assistant message that will be populated by stream
-      _messages.add(_ChatMessage(text: '', isUser: false));
+      _messages.add(ChatMessage(text: '', isUser: false));
     });
 
     _inputController.clear();
@@ -126,6 +128,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
             ).showSnackBar(SnackBar(content: Text('Chat error: $err')));
           },
           onDone: () {
+            log('Chat stream done');
+            log('Final message: ${_messages[assistantIndex].text}');
             _isStreaming = false;
           },
           cancelOnError: true,
@@ -429,40 +433,40 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final m = _messages[index];
-
+                  log(m.text);
                   final bg = m.isUser ? Colors.white : const Color(0xFF2B3540);
                   final textColor = m.isUser ? Colors.black : Colors.white;
                   final bubbleRadius = BorderRadius.circular(12);
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: m.isUser
-                          ? MainAxisAlignment.end
-                          : MainAxisAlignment.start,
-                      children: [
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.62,
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              color: bg,
-                              borderRadius: bubbleRadius,
-                            ),
-                            child: Text(
-                              m.text,
-                              style: TextStyle(color: textColor),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
+                  return BuildMessageBubble(m, context);
+                  // return Padding(
+                  //   padding: const EdgeInsets.symmetric(vertical: 8),
+                  //   child: Row(
+                  //     mainAxisAlignment: m.isUser
+                  //         ? MainAxisAlignment.end
+                  //         : MainAxisAlignment.start,
+                  //     children: [
+                  //       ConstrainedBox(
+                  //         constraints: BoxConstraints(
+                  //           maxWidth: MediaQuery.of(context).size.width * 0.62,
+                  //         ),
+                  //         child: Container(
+                  //           padding: const EdgeInsets.symmetric(
+                  //             horizontal: 16,
+                  //             vertical: 14,
+                  //           ),
+                  //           decoration: BoxDecoration(
+                  //             color: bg,
+                  //             borderRadius: bubbleRadius,
+                  //           ),
+                  //           child: Text(
+                  //             m.text,
+                  //             style: TextStyle(color: textColor),
+                  //           ),
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // );
                 },
               ),
             ),
@@ -629,7 +633,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       onTap: () {
         // Open topic as a message (simulate)
         setState(() {
-          _messages.add(_ChatMessage(text: title, isUser: false));
+          _messages.add(ChatMessage(text: title, isUser: false));
         });
         // close drawer on tablet/mobile
         if (!_isDesktop(MediaQuery.of(context).size.width)) {
@@ -664,10 +668,4 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       ),
     );
   }
-}
-
-class _ChatMessage {
-  String text;
-  final bool isUser;
-  _ChatMessage({required this.text, required this.isUser});
 }
