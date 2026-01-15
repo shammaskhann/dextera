@@ -20,11 +20,12 @@ class CustomButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
+    bool isMobile = width < 600;
     return InkWell(
       onTap: isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: width * 0.6,
+        width: isMobile ? width * 0.8 : width * 0.6,
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           color: isPrimary ? whiteClr : lightBlueClr,

@@ -375,50 +375,50 @@ class _HomeChatScreenState extends State<HomeChatScreen>
 
     return Column(
       children: [
-        // Header area
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: 18,
-          ),
-          decoration: BoxDecoration(
-            color: const Color(0xFF12151A),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              SvgPicture.asset(
-                'assets/icons/logo-D.svg',
-                color: Colors.white,
-                width: 36,
-                height: 36,
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Penalties for Theft Under PPC', // Replace with dynamic title
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                ),
-              ),
-              const Spacer(),
-              // on mobile, show a compact button to open drawer
-              if (isMobile || isTablet)
-                IconButton(
-                  onPressed: _openDrawer,
-                  icon: const Icon(Icons.menu, color: Colors.white),
-                ),
-            ],
-          ),
-        ),
+        // // Header area
+        // Container(
+        //   width: double.infinity,
+        //   padding: EdgeInsets.symmetric(
+        //     horizontal: horizontalPadding,
+        //     vertical: 18,
+        //   ),
+        //   decoration: BoxDecoration(
+        //     color: const Color(0xFF12151A),
+        //     boxShadow: [
+        //       BoxShadow(
+        //         color: Colors.black.withOpacity(0.25),
+        //         blurRadius: 18,
+        //         offset: const Offset(0, 8),
+        //       ),
+        //     ],
+        //   ),
+        //   child: Row(
+        //     children: [
+        //       SvgPicture.asset(
+        //         'assets/icons/logo-D.svg',
+        //         color: Colors.white,
+        //         width: 36,
+        //         height: 36,
+        //       ),
+        //       const SizedBox(width: 1),
+        //       const Text(
+        //         'extera', // Replace with dynamic title
+        //         style: TextStyle(
+        //           color: Colors.white,
+        //           fontWeight: FontWeight.w600,
+        //           fontSize: 18,
+        //         ),
+        //       ),
+        //       const Spacer(),
+        //       // on mobile, show a compact button to open drawer
+        //       if (isMobile || isTablet)
+        //         IconButton(
+        //           onPressed: _openDrawer,
+        //           icon: const Icon(Icons.menu, color: Colors.white),
+        //         ),
+        //     ],
+        //   ),
+        // ),
 
         // Messages list
         Expanded(
@@ -631,14 +631,14 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   Widget _drawerTopic(String title) {
     return GestureDetector(
       onTap: () {
-        // Open topic as a message (simulate)
-        setState(() {
-          _messages.add(ChatMessage(text: title, isUser: false));
-        });
-        // close drawer on tablet/mobile
-        if (!_isDesktop(MediaQuery.of(context).size.width)) {
-          _closeDrawer();
-        }
+        // // Open topic as a message (simulate)
+        // setState(() {
+        //   _messages.add(ChatMessage(text: title, isUser: false));
+        // });
+        // // close drawer on tablet/mobile
+        // if (!_isDesktop(MediaQuery.of(context).size.width)) {
+        //   _closeDrawer();
+        // }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),

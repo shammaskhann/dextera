@@ -30,9 +30,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-
+    bool isMobile = width < 600;
     return Container(
-      width: width * 0.6,
+      width: isMobile ? width * 0.8 : width * 0.6,
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: lightPinkClr.withOpacity(0.15),
