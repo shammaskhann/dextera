@@ -42688,7 +42688,7 @@ AR(a){return this.aqV(a)},
 aqV(a){var s=0,r=A.R(t.bc),q,p=2,o=[],n,m,l,k,j,i,h
 var $async$AR=A.M(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
-k=A.fk("http://localhost:8080/api/auth/register")
+k=A.fk("http://3.82.105.149:8080/api/auth/register")
 j=t.N
 j=A.ar(["Content-Type","application/json"],j,j)
 s=7
@@ -42727,7 +42727,7 @@ A9(a){return this.aoO(a)},
 aoO(a){var s=0,r=A.R(t.DF),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e
 var $async$A9=A.M(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
-n=A.fk("http://localhost:8080/api/auth/login")
+n=A.fk("http://3.82.105.149:8080/api/auth/login")
 A.rK(J.ch(n))
 j=t.N
 j=A.ar(["Content-Type","application/json"],j,j)
@@ -42776,7 +42776,7 @@ Bi(a){return this.arZ(a)},
 arZ(a){var s=0,r=A.R(t.bc),q,p=2,o=[],n,m,l,k,j,i,h
 var $async$Bi=A.M(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
-k=A.fk("http://localhost:8080/api/auth/verify-otp")
+k=A.fk("http://3.82.105.149:8080/api/auth/verify-otp")
 j=t.N
 j=A.ar(["Content-Type","application/json"],j,j)
 s=7
@@ -42815,7 +42815,7 @@ B_(a){return this.arg(a)},
 arg(a){var s=0,r=A.R(t.bc),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$B_=A.M(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
-k=A.fk("http://localhost:8080/api/auth/resend-otp")
+k=A.fk("http://3.82.105.149:8080/api/auth/resend-otp")
 j=t.N
 i=A.ar(["Content-Type","application/json"],j,j)
 s=7
