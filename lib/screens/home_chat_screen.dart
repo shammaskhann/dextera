@@ -3,7 +3,10 @@ import 'dart:developer';
 
 import 'package:dextera/core/app_theme.dart';
 import 'package:dextera/models/chat_message.dart';
+import 'package:dextera/models/conversation.dart';
+import 'package:dextera/models/local_conversation.dart';
 import 'package:dextera/repository/chat_repository.dart';
+import 'package:dextera/repository/convo_repository.dart';
 import 'package:dextera/screens/components/message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -26,8 +29,14 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   final ChatRepository _chatRepository = ChatRepository();
+  final ConvoRepository _convoRepository = ConvoRepository();
   StreamSubscription<String>? _chatSub;
   bool _isStreaming = false;
+
+  // Conversation state
+  String? _currentConversationId;
+  final List<ConversationSummary> _conversations = [];
+  bool _isLoadingConversations = false;
 
   // Drawer open state (for mobile/tablet). On desktop, we force it open.
   bool _drawerOpen = false;
@@ -46,6 +55,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     _drawerOpacity = Tween<double>(begin: 0.0, end: 0.5).animate(
       CurvedAnimation(parent: _drawerAnimController, curve: Curves.easeInOut),
     );
+
+    _refreshConversations();
   }
 
   @override
@@ -75,7 +86,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     });
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     if (_isStreaming) return; // prevent overlapping requests
 
     final text = _inputController.text.trim();
@@ -85,6 +96,9 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     // drawer so the user can see topics/controls. Capture state before
     // mutating _messages.
     final wasEmpty = _messages.isEmpty;
+
+    // Ensure we have an active conversation id (from localhost convo API)
+    await _ensureActiveConversationInitialized(initialMessage: text);
 
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true));
@@ -112,7 +126,11 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     final assistantIndex = _messages.length - 1;
 
     _chatSub = _chatRepository
-        .streamChat(prompt)
+        .streamChat(
+          prompt,
+          conversationId: _currentConversationId!,
+          useRag: true,
+        )
         .listen(
           (chunk) {
             setState(() {
@@ -134,6 +152,143 @@ class _HomeChatScreenState extends State<HomeChatScreen>
           },
           cancelOnError: true,
         );
+  }
+
+  // Ensure we have a conversation id (from localhost) and a corresponding summary entry.
+  Future<void> _ensureActiveConversationInitialized({
+    String? initialMessage,
+  }) async {
+    if (_currentConversationId != null) {
+      // Update title with first user message if it was placeholder before.
+      if (initialMessage != null) {
+        final idx = _conversations.indexWhere(
+          (c) => c.id == _currentConversationId,
+        );
+        if (idx != -1 && _conversations[idx].title.isEmpty) {
+          _conversations[idx] = _conversations[idx].copyWith(
+            title: _buildTitle(initialMessage),
+          );
+        }
+      }
+      return;
+    }
+
+    final title = initialMessage != null ? _buildTitle(initialMessage) : '';
+
+    try {
+      final created = await _convoRepository.create(title: title);
+      _upsertConversationSummary(created);
+      _currentConversationId = created.id;
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create conversation: $e')),
+      );
+      rethrow;
+    }
+  }
+
+  String _buildTitle(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 'New conversation';
+    return trimmed.length <= 50 ? trimmed : '${trimmed.substring(0, 50)}...';
+  }
+
+  Future<void> _loadConversation(String conversationId) async {
+    try {
+      final history = await _chatRepository.fetchConversation(conversationId);
+      setState(() {
+        _currentConversationId = conversationId;
+        _messages
+          ..clear()
+          ..addAll(
+            history.messages
+                .map(
+                  (m) => ChatMessage(
+                    text: m.content,
+                    isUser: m.role.toLowerCase() == 'user',
+                  ),
+                )
+                .toList(),
+          );
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load conversation: $e')),
+      );
+    }
+  }
+
+  Future<void> _deleteConversation(String conversationId) async {
+    try {
+      await _convoRepository.delete(conversationId: conversationId);
+      setState(() {
+        _conversations.removeWhere((c) => c.id == conversationId);
+        if (_currentConversationId == conversationId) {
+          _currentConversationId = null;
+          _messages.clear();
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete conversation: $e')),
+      );
+    }
+  }
+
+  void _upsertConversationSummary(LocalConversation c) {
+    final summary = ConversationSummary(
+      id: c.id,
+      title: c.title,
+      lastUpdated: DateTime.now(),
+      messageCount: 0,
+    );
+
+    setState(() {
+      final existingIdx = _conversations.indexWhere((x) => x.id == c.id);
+      if (existingIdx == -1) {
+        _conversations.insert(0, summary);
+      } else {
+        _conversations[existingIdx] = summary;
+      }
+    });
+  }
+
+  Future<void> _refreshConversations() async {
+    setState(() {
+      _isLoadingConversations = true;
+    });
+
+    try {
+      final list = await _convoRepository.fetchAll();
+      setState(() {
+        _conversations
+          ..clear()
+          ..addAll(
+            list.map(
+              (c) => ConversationSummary(
+                id: c.id,
+                title: c.title,
+                lastUpdated: null,
+                messageCount: 0,
+              ),
+            ),
+          );
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch conversations: $e')),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingConversations = false;
+      });
+    }
   }
 
   void _scrollToBottom() {
@@ -434,39 +589,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                 itemBuilder: (context, index) {
                   final m = _messages[index];
                   log(m.text);
-                  final bg = m.isUser ? Colors.white : const Color(0xFF2B3540);
-                  final textColor = m.isUser ? Colors.black : Colors.white;
-                  final bubbleRadius = BorderRadius.circular(12);
                   return BuildMessageBubble(m, context);
-                  // return Padding(
-                  //   padding: const EdgeInsets.symmetric(vertical: 8),
-                  //   child: Row(
-                  //     mainAxisAlignment: m.isUser
-                  //         ? MainAxisAlignment.end
-                  //         : MainAxisAlignment.start,
-                  //     children: [
-                  //       ConstrainedBox(
-                  //         constraints: BoxConstraints(
-                  //           maxWidth: MediaQuery.of(context).size.width * 0.62,
-                  //         ),
-                  //         child: Container(
-                  //           padding: const EdgeInsets.symmetric(
-                  //             horizontal: 16,
-                  //             vertical: 14,
-                  //           ),
-                  //           decoration: BoxDecoration(
-                  //             color: bg,
-                  //             borderRadius: bubbleRadius,
-                  //           ),
-                  //           child: Text(
-                  //             m.text,
-                  //             style: TextStyle(color: textColor),
-                  //           ),
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // );
                 },
               ),
             ),
@@ -566,6 +689,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                   setState(() {
                     _messages.clear();
                     _inputController.clear();
+                    _currentConversationId = null;
                   });
                   if (!_isDesktop(MediaQuery.of(context).size.width)) {
                     _closeDrawer();
@@ -609,45 +733,71 @@ class _HomeChatScreenState extends State<HomeChatScreen>
 
             const SizedBox(height: 18),
 
-            // Topics list (sample static items)
+            // Conversation history list
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: [
-                  _drawerTopic('Penalties for Theft under PPC'),
-                  _drawerTopic('Defenses Against a Theft Charge'),
-                  _drawerTopic('Bail Procedure'),
-                  _drawerTopic('Precedents on False Theft Claims'),
-                  _drawerTopic('Theft Case 01'),
-                ],
-              ),
+              child: _isLoadingConversations
+                  ? const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : _conversations.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No conversations yet',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      itemCount: _conversations.length,
+                      itemBuilder: (context, index) {
+                        final conv = _conversations[index];
+                        final isActive = conv.id == _currentConversationId;
+                        return Container(
+                          margin: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? const Color(0xFF3A4656)
+                                : const Color(0xFF2F3B48),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            title: Text(
+                              conv.title.isEmpty ? 'Conversation' : conv.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                            onTap: () => _loadConversation(conv.id),
+                            trailing: IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: Colors.white60,
+                              ),
+                              onPressed: () => _deleteConversation(conv.id),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _drawerTopic(String title) {
-    return GestureDetector(
-      onTap: () {
-        // // Open topic as a message (simulate)
-        // setState(() {
-        //   _messages.add(ChatMessage(text: title, isUser: false));
-        // });
-        // // close drawer on tablet/mobile
-        // if (!_isDesktop(MediaQuery.of(context).size.width)) {
-        //   _closeDrawer();
-        // }
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2F3B48),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(title, style: const TextStyle(color: Colors.white)),
       ),
     );
   }
