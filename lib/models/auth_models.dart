@@ -25,6 +25,16 @@ class LoginRequest {
   }
 }
 
+class GoogleLoginRequest {
+  final String idToken;
+
+  GoogleLoginRequest({required this.idToken});
+
+  Map<String, dynamic> toJson() {
+    return {'idToken': idToken};
+  }
+}
+
 class VerifyOtpRequest {
   final String email;
   final String otp;

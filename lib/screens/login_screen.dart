@@ -1,9 +1,13 @@
 import 'package:dextera/screens/components/custom_button.dart';
 import 'package:dextera/screens/components/custom_textfield.dart';
+import 'package:dextera/screens/home_chat_screen.dart';
 import 'package:dextera/screens/signup_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:dextera/core/app_theme.dart';
 import 'package:dextera/controllers/login_controller.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in_web/web_only.dart' as web;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +20,33 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final _controller = LoginController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    // ── Web only: initialize Google Sign-In and listen for the button result
+    if (kIsWeb) {
+      final stream = _controller.initializeForWeb();
+      stream?.listen((GoogleSignInAccount? account) async {
+        if (account != null && mounted) {
+          await _controller.handleGoogleCredential(account, context: context);
+
+          // Navigate on success
+          if (mounted && _controller.errorMessage == null) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeChatScreen()),
+              (route) => false,
+            );
+          } else if (mounted && _controller.errorMessage != null) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(_controller.errorMessage!)));
+          }
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: EdgeInsets.symmetric(horizontal: dividerPadding),
                       child: Row(
                         children: [
-                          Expanded(
+                          const Expanded(
                             child: Divider(color: Colors.white, thickness: 1),
                           ),
                           const Padding(
@@ -116,23 +147,28 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(color: Colors.white70),
                             ),
                           ),
-                          Expanded(
+                          const Expanded(
                             child: Divider(color: Colors.white, thickness: 1),
                           ),
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 15),
 
-                    // --- Google Button ---
-                    CustomButton(
-                      label: "Continue with Google",
-                      iconLink: "assets/icons/google.png",
-                      onTap: () {},
-                      isPrimary: false,
-                    ),
+                    // --- Google Button: renderButton on web, CustomButton on mobile ---
+                    if (kIsWeb)
+                      web.renderButton()
+                    else
+                      CustomButton(
+                        label: "Continue with Google",
+                        iconLink: "assets/icons/google.png",
+                        onTap: () => _controller.continueWithGoogle(context),
+                        isPrimary: false,
+                      ),
 
                     SizedBox(height: spacing),
+
                     GestureDetector(
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const SignupScreen()),
@@ -144,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.white70,
                             fontSize: subtitleFontSize,
                           ),
-                          children: [
+                          children: const [
                             TextSpan(
                               text: "Sign Up",
                               style: TextStyle(

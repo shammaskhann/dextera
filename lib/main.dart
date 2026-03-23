@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dextera/screens/onboarding_screen.dart';
+import 'package:dextera/utils/token_store.dart';
 import 'dart:math' as math;
 // dart:ui imports intentionally omitted; add if needed later
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await TokenStore.init();
   runApp(const MyApp());
 }
 

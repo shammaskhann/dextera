@@ -5,6 +5,7 @@ const String baseApiUrl =
     "http://localhost:8080/api/"; // Temporary (needs HTTPS for GitHub Pages)
 // const String baseApiUrl = "https://YOUR_NGROK_URL.ngrok-free.app/api/"; // Use this once ngrok is running
 const String login = "${baseApiUrl}auth/login";
+const String googleLogin = "${baseApiUrl}google";
 const String register = "${baseApiUrl}auth/register";
 const String verifyOtp = "${baseApiUrl}auth/verify-otp";
 const String resendOtp = "${baseApiUrl}auth/resend-otp";

@@ -108,7 +108,9 @@ class _SignupScreenState extends State<SignupScreen> {
               CustomButton(
                 label: "Continue with Google",
                 iconLink: "assets/icons/google.png",
-                onTap: () {},
+                onTap: () {
+                  _controller.continueWithGoogle(context);
+                },
                 isPrimary: false,
               ),
 

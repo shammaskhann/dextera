@@ -54,6 +54,29 @@ class AuthRepository {
     }
   }
 
+  Future<LoginResponse> googleLogin(GoogleLoginRequest request) async {
+    try {
+      final url = Uri.parse(api.googleLogin);
+      log(url.toString());
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(request.toJson()),
+      );
+
+      final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
+      log(jsonResponse.toString());
+      if (response.statusCode == 200) {
+        return LoginResponse.fromJson(jsonResponse);
+      } else {
+        throw Exception(jsonResponse['message'] ?? 'Google login failed');
+      }
+    } catch (e) {
+      log(e.toString());
+      throw Exception('Network error: ${e.toString()}');
+    }
+  }
+
   Future<ApiResponse> verifyOtp(VerifyOtpRequest request) async {
     try {
       final response = await http.post(
