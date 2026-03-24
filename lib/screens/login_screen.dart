@@ -34,8 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // Navigate on success
           if (mounted && _controller.errorMessage == null) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeChatScreen()),
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              '/chat',
               (route) => false,
             );
           } else if (mounted && _controller.errorMessage != null) {
@@ -170,9 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: spacing),
 
                     GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SignupScreen()),
-                      ),
+                      onTap: () => Navigator.of(context).pushNamed('/signup'),
                       child: RichText(
                         text: TextSpan(
                           text: "Dont have an account? ",

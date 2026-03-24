@@ -58,6 +58,7 @@ class AuthRepository {
     try {
       final url = Uri.parse(api.googleLogin);
       log(url.toString());
+      log(request.toJson().toString());
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},

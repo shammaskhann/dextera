@@ -39,8 +39,8 @@ class OtpController extends ChangeNotifier {
       if (response.status) {
         // Navigate to home screen
         if (context.mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomeChatScreen()),
+          Navigator.of(context).pushReplacementNamed(
+            '/chat',
           );
         }
       } else {

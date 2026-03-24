@@ -192,12 +192,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                                   );
                                                   if (!mounted) return;
                                                   // use pushReplacement if you don't want Onboarding kept in backstack
-                                                  Navigator.of(context).push(
-                                                    MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          const LoginScreen(),
-                                                    ),
-                                                  );
+                                                  Navigator.of(context).pushNamed('/login');
                                                 },
                                                 child: Container(
                                                   padding:
@@ -313,9 +308,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
             const SizedBox(height: 32),
             _buildActionButton('Get Started', () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+              Navigator.of(context).pushNamed('/login');
             }),
             const SizedBox(height: 12),
             _buildActionButton('Learn More', () {

@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dextera/screens/onboarding_screen.dart';
+import 'package:dextera/screens/home_chat_screen.dart';
+import 'package:dextera/screens/login_screen.dart';
+import 'package:dextera/screens/otp_verify_screen.dart';
 import 'package:dextera/utils/token_store.dart';
 import 'dart:math' as math;
-// dart:ui imports intentionally omitted; add if needed later
+import 'package:flutter_web_plugins/url_strategy.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
   await TokenStore.init();
   runApp(const MyApp());
 }
@@ -24,12 +28,42 @@ class MyApp extends StatelessWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp(
+          title: 'Dextera',
           theme: ThemeData(fontFamily: 'Manrope'),
           debugShowCheckedModeBanner: false,
-          home: child,
+          initialRoute: '/',
+          onGenerateRoute: (settings) {
+            Widget page;
+            switch (settings.name) {
+              case '/':
+                page = const SplashScreen();
+                break;
+              case '/onboarding':
+                page = const OnboardingScreen();
+                break;
+              case '/login':
+                page = const LoginScreen();
+                break;
+              case '/signup':
+                page = const SignupScreen();
+                break;
+              case '/chat':
+                page = const HomeChatScreen();
+                break;
+              case '/otp':
+                final email = settings.arguments as String?;
+                page = OtpVerificationScreen(email: email ?? '');
+                break;
+              default:
+                page = const SplashScreen();
+            }
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => page,
+            );
+          },
         );
       },
-      child: const SplashScreen(),
     );
   }
 }
@@ -80,6 +114,7 @@ class _SplashScreenState extends State<SplashScreen>
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Navigator.of(context).push(
             PageRouteBuilder(
+              settings: const RouteSettings(name: '/onboarding'),
               opaque: false,
               pageBuilder: (context, animation, secondaryAnimation) {
                 // pass useBackground=false to avoid duplicating background

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:dextera/screens/home_chat_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -20,7 +22,7 @@ class LoginController extends ChangeNotifier {
 
     GoogleSignIn.instance.initialize(
       clientId:
-          '377653791909-fuaevfuam21k8iffjaaf198rbf6eiiro.apps.googleusercontent.com',
+          '480055628662-0k16ncrv9f881j0se8va6el00tnajjk9.apps.googleusercontent.com',
     );
 
     return GoogleSignIn.instance.authenticationEvents
@@ -39,7 +41,7 @@ class LoginController extends ChangeNotifier {
     try {
       await GoogleSignIn.instance.initialize(
         clientId:
-            '377653791909-fuaevfuam21k8iffjaaf198rbf6eiiro.apps.googleusercontent.com',
+            '480055628662-0k16ncrv9f881j0se8va6el00tnajjk9.apps.googleusercontent.com',
       );
 
       final GoogleSignInAccount account = await GoogleSignIn.instance
@@ -80,6 +82,7 @@ class LoginController extends ChangeNotifier {
       }
 
       final request = GoogleLoginRequest(idToken: idToken);
+      log(request.toJson().toString());
       final response = await _authRepository.googleLogin(request);
 
       _isLoading = false;
@@ -138,9 +141,7 @@ class LoginController extends ChangeNotifier {
         TokenStore.token = response.token;
         if (context.mounted) {
           if (response.user?.verified ?? false) {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const HomeChatScreen()));
+            Navigator.of(context).pushNamed('/chat');
           }
         }
       } else {

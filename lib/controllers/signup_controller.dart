@@ -64,10 +64,9 @@ class SignupController extends ChangeNotifier {
       if (response.status) {
         // Navigate to OTP verification screen
         if (context.mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => OtpVerificationScreen(email: email),
-            ),
+          Navigator.of(context).pushNamed(
+            '/otp',
+            arguments: email,
           );
         }
       } else {
@@ -129,8 +128,8 @@ class SignupController extends ChangeNotifier {
         if (context.mounted) {
           Navigator.of(
             context,
-          ).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const HomeChatScreen()),
+          ).pushNamedAndRemoveUntil(
+            '/chat',
             (route) => false,
           );
         }
