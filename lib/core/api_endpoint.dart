@@ -6,7 +6,7 @@
 const String baseApiUrl =
     "https://unprovable-couponless-dewayne.ngrok-free.dev/api/"; // Use this once ngrok is running
 const String login = "${baseApiUrl}auth/login";
-const String googleLogin = "${baseApiUrl}google";
+const String googleLogin = "${baseApiUrl}auth/google";
 const String register = "${baseApiUrl}auth/register";
 const String verifyOtp = "${baseApiUrl}auth/verify-otp";
 const String resendOtp = "${baseApiUrl}auth/resend-otp";

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:dextera/screens/components/custom_button.dart';
 import 'package:dextera/screens/components/custom_textfield.dart';
 import 'package:dextera/screens/home_chat_screen.dart';
@@ -34,11 +36,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // Navigate on success
           if (mounted && _controller.errorMessage == null) {
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              '/chat',
-              (route) => false,
-            );
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/chat', (route) => false);
           } else if (mounted && _controller.errorMessage != null) {
+            log('Google login failed: ${_controller.errorMessage}');
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(SnackBar(content: Text(_controller.errorMessage!)));

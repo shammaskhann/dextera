@@ -50,6 +50,7 @@ class LoginController extends ChangeNotifier {
       if (!context.mounted) return;
       await handleGoogleCredential(account, context: context);
     } catch (e) {
+      log('Google Sign-In error: $e');
       _isLoading = false;
       _errorMessage = e.toString();
       notifyListeners();
@@ -96,12 +97,14 @@ class LoginController extends ChangeNotifier {
         notifyListeners();
 
         if (context != null && context.mounted) {
+          log('Google login failed: ${response.message}');
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(response.message)));
         }
       }
     } catch (e) {
+      log('Error during Google login process: $e');
       _isLoading = false;
       _errorMessage = e.toString();
       notifyListeners();

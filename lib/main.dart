@@ -15,6 +15,17 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
   await TokenStore.init();
+
+  // Suppress debug service errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final errorString = details.exception.toString();
+    // Suppress "Cannot send Null" and "Uneven calls" errors from debug service
+    if (!errorString.contains('Cannot send Null') &&
+        !errorString.contains('Uneven calls to startSync and finishSync')) {
+      FlutterError.dumpErrorToConsole(details);
+    }
+  };
+
   runApp(const MyApp());
 }
 
@@ -57,10 +68,7 @@ class MyApp extends StatelessWidget {
               default:
                 page = const SplashScreen();
             }
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (_) => page,
-            );
+            return MaterialPageRoute(settings: settings, builder: (_) => page);
           },
         );
       },
