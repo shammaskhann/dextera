@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dextera/models/conversation.dart';
+import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 
 class ChatRepository {
@@ -14,6 +16,7 @@ class ChatRepository {
     String message, {
     required String conversationId,
     bool useRag = true,
+    String? documentContext,
   }) async* {
     try {
       final uri = Uri.parse('$_baseUrl/api/v1/chat');
@@ -22,6 +25,7 @@ class ChatRepository {
         'message': message,
         'conversation_id': conversationId,
         'use_rag': useRag,
+        if (documentContext != null) 'document_context': documentContext,
       };
 
       final bodyString = jsonEncode(bodyData);
@@ -48,14 +52,19 @@ class ChatRepository {
           in response.stream
               .transform(utf8.decoder)
               .transform(const LineSplitter())) {
-        if (line.isEmpty) continue;
-        if (!line.startsWith('data:')) continue;
-
-        final data = line.substring(5).trimLeft();
-        if (data.isEmpty) continue;
-        if (data.toLowerCase() == '[done]') break;
-
-        yield data;
+        
+        if (line.startsWith('data: ')) {
+          String token = line.replaceFirst('data: ', '');
+          if (token.toLowerCase() == '[done]') break;
+          // If token is empty but the line had 'data: ', it might have been 'data:  ' 
+          // However, replaceFirst will leave the remaining characters untouched.
+          yield token;
+        } else if (line.startsWith('data:')) {
+          // Handle cases where the backend sends 'data:' without a space
+          String token = line.replaceFirst('data:', '');
+          if (token.toLowerCase() == '[done]') break;
+          yield token;
+        }
       }
     } catch (e) {
       // Silently handle null body errors from debug service
@@ -118,4 +127,48 @@ class ChatRepository {
       rethrow;
     }
   }
+
+  /// Uploads a PDF to be summarized.
+  Future<Map<String, dynamic>> summarizePdf(
+    String conversationId,
+    PlatformFile file,
+  ) async {
+    final uri = Uri.parse('$_baseUrl/api/v1/summarize?conversation_id=$conversationId');
+    final request = http.MultipartRequest('POST', uri);
+
+    if (kIsWeb) {
+      if (file.bytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name),
+        );
+      } else if (file.readStream != null) {
+        request.files.add(
+          http.MultipartFile(
+            'file',
+            file.readStream!,
+            file.size,
+            filename: file.name,
+          ),
+        );
+      } else {
+        throw Exception('File bytes and readStream are null on Web');
+      }
+    } else {
+      if (file.path == null) throw Exception('File path is null on non-Web platform');
+      request.files.add(
+        await http.MultipartFile.fromPath('file', file.path!),
+      );
+    }
+
+    final response = await request.send();
+    final responseBody = await response.stream.bytesToString();
+
+    if (response.statusCode == 200) {
+      final jsonMap = jsonDecode(responseBody) as Map<String, dynamic>;
+      return jsonMap;
+    } else {
+      throw Exception('PDF upload failed (${response.statusCode}): $responseBody');
+    }
+  }
 }
+

@@ -12,7 +12,7 @@ class ConvoRepository {
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      // 'ngrok-skip-browser-warning': 'true',
+      'ngrok-skip-browser-warning': 'true',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }

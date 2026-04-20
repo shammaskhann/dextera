@@ -8,6 +8,7 @@ import 'package:dextera/models/local_conversation.dart';
 import 'package:dextera/repository/chat_repository.dart';
 import 'package:dextera/repository/convo_repository.dart';
 import 'package:dextera/screens/components/message_bubble.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -37,6 +38,14 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   String? _currentConversationId;
   final List<ConversationSummary> _conversations = [];
   bool _isLoadingConversations = false;
+
+  // Document mode state
+  bool _isDocumentMode = false;
+  String? _documentContext;
+
+  bool _isSummarizing = false;
+  String? _pendingDocumentSummary;
+  String? _pendingDocumentName;
 
   // Drawer open state (for mobile/tablet). On desktop, we force it open.
   bool _drawerOpen = false;
@@ -129,12 +138,13 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         .streamChat(
           prompt,
           conversationId: _currentConversationId!,
-          useRag: true,
+          useRag: !_isDocumentMode,
+          documentContext: _documentContext,
         )
         .listen(
           (chunk) {
             setState(() {
-              _messages[assistantIndex].text += chunk;
+              _messages[assistantIndex].text += chunk + " ";
             });
             _scrollToBottom();
           },
@@ -199,6 +209,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       final history = await _chatRepository.fetchConversation(conversationId);
       setState(() {
         _currentConversationId = conversationId;
+        _isDocumentMode = false;
+        _documentContext = null;
         _messages
           ..clear()
           ..addAll(
@@ -228,6 +240,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         _conversations.removeWhere((c) => c.id == conversationId);
         if (_currentConversationId == conversationId) {
           _currentConversationId = null;
+          _isDocumentMode = false;
+          _documentContext = null;
           _messages.clear();
         }
       });
@@ -303,6 +317,60 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     });
   }
 
+  Future<void> _uploadPdf() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+        withReadStream: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+
+      setState(() {
+        _isSummarizing = true;
+        _pendingDocumentSummary = null;
+        _pendingDocumentName = file.name;
+        _messages.clear(); // Ensure we don't show the chat view
+      });
+
+      await _ensureActiveConversationInitialized(
+        initialMessage: 'Document: ${file.name}',
+      );
+      if (_currentConversationId == null) {
+        setState(() {
+          _isSummarizing = false;
+        });
+        return;
+      }
+
+      final response = await _chatRepository.summarizePdf(
+        _currentConversationId!,
+        file,
+      );
+      final summary = response['summary'] ?? 'No summary returned';
+
+      if (!mounted) return;
+      setState(() {
+        _isSummarizing = false;
+        _pendingDocumentSummary = summary;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSummarizing = false;
+          _pendingDocumentSummary = null;
+          _pendingDocumentName = null;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error uploading PDF: $e')));
+      }
+    }
+  }
+
   // Use these breakpoints consistently
   bool _isMobile(double w) => w < 700;
   bool _isTablet(double w) => w >= 700 && w < 1024;
@@ -358,7 +426,9 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               // - If messages => active chat layout
               // ===========================
               Expanded(
-                child: _messages.isEmpty
+                child: (_isSummarizing || _pendingDocumentSummary != null)
+                    ? _buildSummaryState(isMobile, isTablet, isDesktop)
+                    : _messages.isEmpty
                     ? _buildInitialCenteredState(isMobile, isTablet, isDesktop)
                     : _buildActiveChatState(isMobile, isTablet, isDesktop),
               ),
@@ -506,19 +576,197 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                const SizedBox(width: 12),
-                _roundIconButton(Icons.add, () {
-                  // your extra action
-                }),
-
                 const SizedBox(width: 10),
                 _roundIconButton(Icons.send, _sendMessage),
               ],
             ),
           ),
+          const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(height: 1, width: 60, color: Colors.white24),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'OR',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(height: 1, width: 60, color: Colors.white24),
+            ],
+          ),
+          const SizedBox(height: 24),
+          InkWell(
+            onTap: _uploadPdf,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2A3340),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF455168), width: 1.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.post_add, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Summarize a Document',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  // ----------------------------
+  // Summary view state
+  // ----------------------------
+  Widget _buildSummaryState(bool isMobile, bool isTablet, bool isDesktop) {
+    if (_isSummarizing) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Colors.white),
+            const SizedBox(height: 16),
+            Text(
+              'Summarizing ${_pendingDocumentName ?? "document"}...',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_pendingDocumentSummary != null) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Summary for ${_pendingDocumentName ?? "Document"}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2A3340),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    _pendingDocumentSummary!,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _pendingDocumentSummary = null;
+                          _pendingDocumentName = null;
+                        });
+                      },
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.white54, fontSize: 16),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _isDocumentMode = true;
+                          _documentContext = _pendingDocumentSummary;
+                          _messages.add(
+                            ChatMessage(
+                              text:
+                                  '**Document Summary:**\n\n$_pendingDocumentSummary',
+                              isUser: false,
+                            ),
+                          );
+                          _messages.add(
+                            ChatMessage(
+                              text:
+                                  'Now discussing: $_pendingDocumentName. Your follow-up questions will be answered based on this document.',
+                              isUser: false,
+                            ),
+                          );
+                          _pendingDocumentSummary = null;
+                          _pendingDocumentName = null;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF455168),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(
+                        Icons.chat_bubble_outline,
+                        color: Colors.white,
+                      ),
+                      label: const Text(
+                        'Continue as Chat',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox();
   }
 
   // ----------------------------
@@ -530,51 +778,6 @@ class _HomeChatScreenState extends State<HomeChatScreen>
 
     return Column(
       children: [
-        // // Header area
-        // Container(
-        //   width: double.infinity,
-        //   padding: EdgeInsets.symmetric(
-        //     horizontal: horizontalPadding,
-        //     vertical: 18,
-        //   ),
-        //   decoration: BoxDecoration(
-        //     color: const Color(0xFF12151A),
-        //     boxShadow: [
-        //       BoxShadow(
-        //         color: Colors.black.withOpacity(0.25),
-        //         blurRadius: 18,
-        //         offset: const Offset(0, 8),
-        //       ),
-        //     ],
-        //   ),
-        //   child: Row(
-        //     children: [
-        //       SvgPicture.asset(
-        //         'assets/icons/logo-D.svg',
-        //         color: Colors.white,
-        //         width: 36,
-        //         height: 36,
-        //       ),
-        //       const SizedBox(width: 1),
-        //       const Text(
-        //         'extera', // Replace with dynamic title
-        //         style: TextStyle(
-        //           color: Colors.white,
-        //           fontWeight: FontWeight.w600,
-        //           fontSize: 18,
-        //         ),
-        //       ),
-        //       const Spacer(),
-        //       // on mobile, show a compact button to open drawer
-        //       if (isMobile || isTablet)
-        //         IconButton(
-        //           onPressed: _openDrawer,
-        //           icon: const Icon(Icons.menu, color: Colors.white),
-        //         ),
-        //     ],
-        //   ),
-        // ),
-
         // Messages list
         Expanded(
           child: Padding(
@@ -631,8 +834,6 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  _roundIconButton(Icons.add, () {}),
                   const SizedBox(width: 10),
                   _roundIconButton(Icons.send, _sendMessage),
                 ],
@@ -690,6 +891,11 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     _messages.clear();
                     _inputController.clear();
                     _currentConversationId = null;
+                    _isDocumentMode = false;
+                    _documentContext = null;
+                    _isSummarizing = false;
+                    _pendingDocumentSummary = null;
+                    _pendingDocumentName = null;
                   });
                   if (!_isDesktop(MediaQuery.of(context).size.width)) {
                     _closeDrawer();
@@ -787,7 +993,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                               icon: const Icon(
                                 Icons.delete_outline,
                                 size: 18,
-                                color: Colors.white60,
+                                color: Colors.redAccent,
                               ),
                               onPressed: () => _deleteConversation(conv.id),
                             ),
@@ -795,6 +1001,24 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                         );
                       },
                     ),
+            ),
+            //Logout
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.logout, color: Colors.redAccent),
+                label: const Text(
+                  'Logout',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2A3340),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
