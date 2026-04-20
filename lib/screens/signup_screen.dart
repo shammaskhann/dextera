@@ -29,20 +29,20 @@ class _SignupScreenState extends State<SignupScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 30),
-              const Text(
+              Text(
                 "Create an account",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: whiteClr,
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 "Seamlessly continue past conversations, build personal case files,\n"
                 "and provide feedback to refine your answers",
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: whiteClr.withOpacity(0.70),
                   fontSize: 14,
                   height: 1.5,
                 ),
@@ -94,12 +94,12 @@ class _SignupScreenState extends State<SignupScreen> {
               // --- Divider with OR ---
               Row(
                 children: [
-                  Expanded(child: Divider(color: Colors.white, thickness: 1)),
-                  const Padding(
+                  Expanded(child: Divider(color: whiteClr, thickness: 1)),
+                  Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text("or", style: TextStyle(color: Colors.white70)),
+                    child: Text("or", style: TextStyle(color: whiteClr.withOpacity(0.70))),
                   ),
-                  Expanded(child: Divider(color: Colors.white, thickness: 1)),
+                  Expanded(child: Divider(color: whiteClr, thickness: 1)),
                 ],
               ),
               const SizedBox(height: 25),
@@ -118,12 +118,12 @@ class _SignupScreenState extends State<SignupScreen> {
               RichText(
                 text: TextSpan(
                   text: "Already have an account? ",
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  style: TextStyle(color: whiteClr.withOpacity(0.70), fontSize: 14),
                   children: [
                     TextSpan(
                       text: "Login",
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: whiteClr,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

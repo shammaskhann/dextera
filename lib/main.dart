@@ -340,7 +340,7 @@ class _SplashScreenState extends State<SplashScreen>
           //                 child: Text(
           //                   'Dextera',
           //                   style: TextStyle(
-          //                     color: Colors.white,
+          //                     color: whiteClr,
           //                     fontSize: dSize * 0.32,
           //                     fontWeight: FontWeight.bold,
           //                     letterSpacing: 1.2,

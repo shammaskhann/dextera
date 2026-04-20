@@ -1,11 +1,7 @@
-import 'dart:developer';
 import 'dart:ui';
-import 'dart:math' as math;
 
 import 'package:dextera/core/app_theme.dart';
 import 'package:dextera/screens/components/animated_component.dart';
-import 'package:dextera/screens/login_screen.dart';
-import 'package:dextera/screens/signup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -61,7 +57,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     // Main content: animated D logo and revealing text
                     Positioned.fill(
                       child: Center(
-                        child: Container(
+                        child: SizedBox(
                           width: dSize * 1.8,
                           child: LayoutBuilder(
                             builder: (context, constraints) {
@@ -100,7 +96,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                             child: Text(
                                               'extera',
                                               style: TextStyle(
-                                                color: Colors.white,
+                                                color: whiteClr,
                                                 fontSize: dSize * 0.39,
                                                 fontFamily: 'Manrope',
                                                 fontWeight: FontWeight.bold,
@@ -209,7 +205,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                                           28,
                                                         ),
                                                     border: Border.all(
-                                                      color: Colors.white,
+                                                      color: whiteClr,
                                                     ),
                                                   ),
                                                   child: Row(
@@ -285,10 +281,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Dextera',
               style: TextStyle(
-                color: Colors.white,
+                color: whiteClr,
                 fontSize: 32,
                 fontFamily: 'Manrope',
                 fontWeight: FontWeight.bold,
@@ -408,7 +404,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             decoration: BoxDecoration(
               color: const Color(0xFFDEDFE3),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white),
+              border: Border.all(color: whiteClr),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

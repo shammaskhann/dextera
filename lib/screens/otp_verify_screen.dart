@@ -1,3 +1,4 @@
+import 'package:dextera/core/app_theme.dart';
 import 'package:dextera/controllers/otp_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -245,7 +246,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               Text(
                 "OTP Verification",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: whiteClr,
                   fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
                 ),
@@ -254,7 +255,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               Text(
                 "A One-Time Password has been sent to ${widget.email}\nEnter the 6 digit code to verify it’s really you",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, height: 1.4),
+                style: TextStyle(color: whiteClr, height: 1.4),
               ),
               SizedBox(height: 25.h),
 
@@ -282,13 +283,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     //fieldHeight: fieldSizeByHeight,
                     fieldWidth: fieldSizeByWidth,
-                    borderColor: Colors.white,
+                    borderColor: whiteClr,
                     textStyle: TextStyle(
-                      color: Colors.white,
+                      color: whiteClr,
                       fontSize: fieldSize * 0.45,
                       fontWeight: FontWeight.w600,
                     ),
-                    enabledBorderColor: Colors.white,
+                    enabledBorderColor: whiteClr,
                     //set to true to show as box or false to show as dash
                     showFieldAsBox: true,
                     borderRadius: BorderRadius.circular(fieldSize * 0.12),
@@ -322,7 +323,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   //             controller: controllers[index],
                   //             textAlign: TextAlign.center,
                   //             style: TextStyle(
-                  //               color: Colors.white,
+                  //               color: whiteClr,
                   //               fontSize: fieldSize * 0.45,
                   //               fontWeight: FontWeight.w600,
                   //             ),
@@ -343,7 +344,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   //                   fieldSize * 0.12,
                   //                 ),
                   //                 borderSide: const BorderSide(
-                  //                   color: Colors.white12,
+                  //                   color: whiteClr.withOpacity(0.12),
                   //                   width: 1,
                   //                 ),
                   //               ),
@@ -352,7 +353,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   //                   fieldSize * 0.12,
                   //                 ),
                   //                 borderSide: const BorderSide(
-                  //                   color: Colors.white,
+                  //                   color: whiteClr,
                   //                   width: 1.5,
                   //                 ),
                   //               ),
@@ -407,7 +408,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             height: buttonHeight,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: whiteClr,
                               borderRadius: BorderRadius.circular(28),
                               boxShadow: [
                                 BoxShadow(
@@ -461,20 +462,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             _otpController.resendOtp(widget.email, context);
                           },
                     child: _otpController.isResending
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white70,
+                                whiteClr.withOpacity(0.70),
                               ),
                             ),
                           )
-                        : const Text(
+                        : Text(
                             "Resend Code",
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: whiteClr.withOpacity(0.70),
                               fontSize: 15,
                             ),
                           ),

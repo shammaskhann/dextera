@@ -45,7 +45,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             child: TextField(
               controller: widget.controller,
               obscureText: isPasswordField,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: whiteClr),
               decoration: InputDecoration(
                 hintText: widget.hint,
                 hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),

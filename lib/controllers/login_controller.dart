@@ -1,6 +1,5 @@
 import 'dart:developer';
 
-import 'package:dextera/screens/home_chat_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:dextera/repository/auth_repository.dart';

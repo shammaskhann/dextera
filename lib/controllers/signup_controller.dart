@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dextera/repository/auth_repository.dart';
 import 'package:dextera/models/auth_models.dart';
-import 'package:dextera/screens/otp_verify_screen.dart';
-import 'package:dextera/screens/home_chat_screen.dart';
 import 'package:dextera/utils/token_store.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 

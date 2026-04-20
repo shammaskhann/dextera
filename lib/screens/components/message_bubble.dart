@@ -132,9 +132,9 @@
 //     margin: const EdgeInsets.only(top: 20),
 //     padding: const EdgeInsets.all(16),
 //     decoration: BoxDecoration(
-//       color: const Color(0xFF1A1F27),
+//       color: drawerClr,
 //       borderRadius: BorderRadius.circular(12),
-//       border: Border.all(color: const Color(0xFF2B3540)),
+//       border: Border.all(color: drawerClr),
 //     ),
 //     child: Column(
 //       crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,7 +146,7 @@
 //             Text(
 //               'Case Examples',
 //               style: TextStyle(
-//                 color: Colors.white,
+//                 color: whiteClr,
 //                 fontWeight: FontWeight.w600,
 //                 fontSize: 16,
 //               ),
@@ -258,7 +258,7 @@
 //           const SizedBox(height: 8),
 //           Text(
 //             example['content'],
-//             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+//             style: TextStyle(color: whiteClr.withOpacity(0.70), fontSize: 13, height: 1.4),
 //           ),
 //         ],
 //       ],
@@ -280,7 +280,7 @@
 //             child: Text(
 //               section['title'],
 //               style: TextStyle(
-//                 color: Colors.white,
+//                 color: whiteClr,
 //                 fontWeight: FontWeight.w600,
 //                 fontSize: 16,
 //                 height: 1.3,
@@ -295,7 +295,7 @@
 //             child: Text(
 //               section['content'],
 //               style: TextStyle(
-//                 color: Colors.white70,
+//                 color: whiteClr.withOpacity(0.70),
 //                 fontSize: 14,
 //                 height: 1.5,
 //               ),
@@ -318,7 +318,7 @@
 //                         child: Icon(
 //                           Icons.circle,
 //                           size: 6,
-//                           color: Colors.white70,
+//                           color: whiteClr.withOpacity(0.70),
 //                         ),
 //                       ),
 //                       Expanded(
@@ -345,7 +345,7 @@
 //           TextSpan(
 //             text: part['text'],
 //             style: TextStyle(
-//               color: Colors.white70,
+//               color: whiteClr.withOpacity(0.70),
 //               fontWeight: part['isBold'] ? FontWeight.w700 : FontWeight.normal,
 //               fontSize: 14,
 //               height: 1.5,
@@ -358,8 +358,8 @@
 
 // // Update the message bubble to use the parser
 // Widget BuildMessageBubble(ChatMessage m, BuildContext context) {
-//   final bg = m.isUser ? Colors.white : const Color(0xFF2B3540);
-//   final textColor = m.isUser ? Colors.black : Colors.white;
+//   final bg = m.isUser ? whiteClr : drawerClr;
+//   final textColor = m.isUser ? Colors.black : whiteClr;
 //   final bubbleRadius = BorderRadius.circular(12);
 
 //   return Padding(
@@ -390,6 +390,7 @@
 // ----------------------------
 import 'package:dextera/models/chat_message.dart';
 import 'package:flutter/material.dart';
+import 'package:dextera/core/app_theme.dart';
 
 Widget _buildMessageContent(String text) {
   // 1. Split the text to prevent duplicate Case Examples
@@ -532,9 +533,9 @@ Widget _buildCaseExampleSection(String text) {
     margin: const EdgeInsets.only(top: 20),
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: const Color(0xFF1A1F27),
+      color: drawerClr,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFF2B3540)),
+      border: Border.all(color: drawerClr),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -543,10 +544,10 @@ Widget _buildCaseExampleSection(String text) {
           children: [
             const Icon(Icons.gavel, color: Colors.amber, size: 20),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               'Case Examples',
               style: TextStyle(
-                color: Colors.white,
+                color: whiteClr,
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
               ),
@@ -646,7 +647,7 @@ Widget _buildCaseExample(Map<String, dynamic> example) {
               // Optional: Add a small "Summary:" label if you want it visually
               // Text(
               //   "Summary:",
-              //   style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold),
+              //   style: TextStyle(color: whiteClr.withOpacity(0.54), fontSize: 11, fontWeight: FontWeight.bold),
               // ),
               // SizedBox(height: 4),
               RichText(
@@ -656,10 +657,10 @@ Widget _buildCaseExample(Map<String, dynamic> example) {
                       TextSpan(
                         text: part['text'],
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: whiteClr.withOpacity(0.70),
                           fontWeight: part['isBold']
                               ? FontWeight.w700
-                              : FontWeight.normal,
+                              : FontWeight.w500,
                           fontSize: 13,
                           height: 1.4,
                         ),
@@ -687,8 +688,8 @@ Widget _buildMessageSection(Map<String, dynamic> section) {
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               section['title'],
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: whiteClr,
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
                 height: 1.3,
@@ -725,8 +726,8 @@ Widget _buildMessageSection(Map<String, dynamic> section) {
                           margin: const EdgeInsets.only(
                             top: 5,
                           ), // Fine tune alignment
-                          decoration: const BoxDecoration(
-                            color: Colors.white70,
+                          decoration: BoxDecoration(
+                            color: whiteClr.withOpacity(0.70),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -756,8 +757,8 @@ Widget _buildBoldText(List<Map<String, dynamic>> boldParts) {
           TextSpan(
             text: part['text'],
             style: TextStyle(
-              color: Colors.white70,
-              fontWeight: part['isBold'] ? FontWeight.w700 : FontWeight.normal,
+              color: whiteClr.withOpacity(0.70),
+              fontWeight: part['isBold'] ? FontWeight.w700 : FontWeight.w500,
               fontSize: 14,
               height: 1.5,
             ),
@@ -769,8 +770,8 @@ Widget _buildBoldText(List<Map<String, dynamic>> boldParts) {
 
 // Update the message bubble to use the parser
 Widget BuildMessageBubble(ChatMessage m, BuildContext context) {
-  final bg = m.isUser ? Colors.white : const Color(0xFF2B3540);
-  final textColor = m.isUser ? Colors.black : Colors.white;
+  final bg = m.isUser ? ThemeHelper.myMessageBubble : Colors.transparent;
+  final textColor = whiteClr;
   final bubbleRadius = BorderRadius.circular(12);
 
   return Padding(
@@ -791,7 +792,14 @@ Widget BuildMessageBubble(ChatMessage m, BuildContext context) {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(color: bg, borderRadius: bubbleRadius),
             child: m.isUser
-                ? Text(m.text, style: TextStyle(color: textColor))
+                ? Text(
+                    m.text,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  )
                 : _buildMessageContent(m.text),
           ),
         ),

@@ -8,6 +8,8 @@ import 'package:dextera/models/local_conversation.dart';
 import 'package:dextera/repository/chat_repository.dart';
 import 'package:dextera/repository/convo_repository.dart';
 import 'package:dextera/screens/components/message_bubble.dart';
+import 'package:dextera/screens/login_screen.dart';
+import 'package:dextera/utils/token_store.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -144,7 +146,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         .listen(
           (chunk) {
             setState(() {
-              _messages[assistantIndex].text += chunk + " ";
+              _messages[assistantIndex].text += "$chunk ";
             });
             _scrollToBottom();
           },
@@ -336,9 +338,9 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         _messages.clear(); // Ensure we don't show the chat view
       });
 
-      await _ensureActiveConversationInitialized(
-        initialMessage: 'Document: ${file.name}',
-      );
+      // await _ensureActiveConversationInitialized(
+      //   initialMessage: 'Document: ${file.name}',
+      // );
       if (_currentConversationId == null) {
         setState(() {
           _isSummarizing = false;
@@ -378,121 +380,34 @@ class _HomeChatScreenState extends State<HomeChatScreen>
 
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    final isMobile = _isMobile(w);
-    final isTablet = _isTablet(w);
-    final isDesktop = _isDesktop(w);
+    return ValueListenableBuilder<bool>(
+      valueListenable: ThemeHelper.isDarkModeNotifier,
+      builder: (context, isDark, child) {
+        final w = MediaQuery.of(context).size.width;
+        final isMobile = _isMobile(w);
+        final isTablet = _isTablet(w);
+        final isDesktop = _isDesktop(w);
 
-    // Drawer visibility is controlled by `_drawerOpen` for all breakpoints.
-    // Desktop no longer forces the drawer open — it starts closed until the
-    // user opens it or sends the first prompt.
-    final leftPanelVisible = _drawerOpen;
+        // Drawer visibility is controlled by `_drawerOpen` for all breakpoints.
+        // Desktop no longer forces the drawer open — it starts closed until the
+        // user opens it or sends the first prompt.
+        final leftPanelVisible = _drawerOpen;
 
-    return Scaffold(
-      backgroundColor: primaryClr,
-      // Top AppBar for mobile/tablet only
-      appBar: isDesktop
-          ? null
-          : AppBar(
-              elevation: 0,
+        return Scaffold(
+          backgroundColor: primaryClr,
+          // Top AppBar for mobile/tablet only
+          appBar: isDesktop
+              ? null
+              : AppBar(
+                  elevation: 0,
 
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              leading: IconButton(
-                icon: SvgPicture.asset("assets/icons/drawer.svg"),
-                onPressed: () {
-                  if (_drawerOpen) {
-                    _closeDrawer();
-                  } else {
-                    _openDrawer();
-                  }
-                },
-              ),
-            ),
-      body: Stack(
-        children: [
-          Row(
-            children: [
-              // ===========================
-              // LEFT PERSISTENT DRAWER (desktop)
-              // Only show when the drawer has been opened by the user
-              // ===========================
-              if (isDesktop && leftPanelVisible)
-                SizedBox(width: 320, child: _buildDrawerColumn()),
-
-              // ===========================
-              // MAIN CONTENT AREA
-              // - If no messages => centered initial state
-              // - If messages => active chat layout
-              // ===========================
-              Expanded(
-                child: (_isSummarizing || _pendingDocumentSummary != null)
-                    ? _buildSummaryState(isMobile, isTablet, isDesktop)
-                    : _messages.isEmpty
-                    ? _buildInitialCenteredState(isMobile, isTablet, isDesktop)
-                    : _buildActiveChatState(isMobile, isTablet, isDesktop),
-              ),
-            ],
-          ),
-
-          // ===========================
-          // OVERLAY SLIDE-IN DRAWER (mobile/tablet T2)
-          // Show when _drawerOpen && not desktop
-          // ===========================
-          if (!isDesktop && leftPanelVisible)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: _closeDrawer,
-                child: FadeTransition(
-                  opacity: _drawerOpacity,
-                  child: Container(color: Colors.black.withOpacity(0.4)),
-                ),
-              ),
-            ),
-          if (!isDesktop && leftPanelVisible)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isTablet ? 360 : 300,
-                  minWidth: 260,
-                ),
-                child: SlideTransition(
-                  position:
-                      Tween<Offset>(
-                        begin: const Offset(-1.0, 0),
-                        end: Offset.zero,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: _drawerAnimController,
-                          curve: Curves.easeOut,
-                        ),
-                      ),
-                  child: Container(
-                    color: const Color(0xFF1A1F28),
-                    height: double.infinity,
-                    child: _buildDrawerColumn(),
-                  ),
-                ),
-              ),
-            ),
-          // Desktop top-left menu icon to toggle drawer open/closed
-          if (isDesktop)
-            Positioned(
-              top: 12,
-              left: 12,
-              child: SafeArea(
-                child: Material(
-                  color: Colors.transparent,
-                  child: IconButton(
-                    icon: _drawerOpen
-                        ? SizedBox.shrink()
-                        : SvgPicture.asset(
-                            'assets/icons/drawer.svg',
-                            //color: Colors.white,
-                            //  width: 20,
-                            // height: 20,
-                          ),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: whiteClr,
+                  leading: IconButton(
+                    icon: SvgPicture.asset(
+                      "assets/icons/drawer.svg",
+                      colorFilter: ColorFilter.mode(whiteClr, BlendMode.srcIn),
+                    ),
                     onPressed: () {
                       if (_drawerOpen) {
                         _closeDrawer();
@@ -501,11 +416,138 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       }
                     },
                   ),
+                  actions: [
+                    IconButton(
+                      icon: Icon(
+                        isDark ? Icons.light_mode : Icons.dark_mode,
+                        color: whiteClr,
+                      ),
+                      onPressed: ThemeHelper.toggleTheme,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                 ),
+          body: Stack(
+            children: [
+              Row(
+                children: [
+                  // ===========================
+                  // LEFT PERSISTENT DRAWER (desktop)
+                  // Only show when the drawer has been opened by the user
+                  // ===========================
+                  if (isDesktop && leftPanelVisible)
+                    SizedBox(width: 320, child: _buildDrawerColumn()),
+
+                  // ===========================
+                  // MAIN CONTENT AREA
+                  // - If no messages => centered initial state
+                  // - If messages => active chat layout
+                  // ===========================
+                  Expanded(
+                    child: (_isSummarizing || _pendingDocumentSummary != null)
+                        ? _buildSummaryState(isMobile, isTablet, isDesktop)
+                        : _messages.isEmpty
+                        ? _buildInitialCenteredState(
+                            isMobile,
+                            isTablet,
+                            isDesktop,
+                          )
+                        : _buildActiveChatState(isMobile, isTablet, isDesktop),
+                  ),
+                ],
               ),
-            ),
-        ],
-      ),
+
+              // ===========================
+              // OVERLAY SLIDE-IN DRAWER (mobile/tablet T2)
+              // Show when _drawerOpen && not desktop
+              // ===========================
+              if (!isDesktop && leftPanelVisible)
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: _closeDrawer,
+                    child: FadeTransition(
+                      opacity: _drawerOpacity,
+                      child: Container(color: Colors.black.withOpacity(0.4)),
+                    ),
+                  ),
+                ),
+              if (!isDesktop && leftPanelVisible)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isTablet ? 360 : 300,
+                      minWidth: 260,
+                    ),
+                    child: SlideTransition(
+                      position:
+                          Tween<Offset>(
+                            begin: const Offset(-1.0, 0),
+                            end: Offset.zero,
+                          ).animate(
+                            CurvedAnimation(
+                              parent: _drawerAnimController,
+                              curve: Curves.easeOut,
+                            ),
+                          ),
+                      child: Container(
+                        color: const Color(0xFF1A1F28),
+                        height: double.infinity,
+                        child: _buildDrawerColumn(),
+                      ),
+                    ),
+                  ),
+                ),
+              // Desktop top-left menu icon to toggle drawer open/closed
+              if (isDesktop)
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: SafeArea(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: IconButton(
+                        icon: _drawerOpen
+                            ? SizedBox.shrink()
+                            : SvgPicture.asset(
+                                'assets/icons/drawer.svg',
+                                //color: whiteClr,
+                                //  width: 20,
+                                // height: 20,
+                              ),
+                        onPressed: () {
+                          if (_drawerOpen) {
+                            _closeDrawer();
+                          } else {
+                            _openDrawer();
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              // Desktop top-right theme toggle
+              if (isDesktop)
+                Positioned(
+                  top: 12,
+                  right: 24,
+                  child: SafeArea(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: IconButton(
+                        icon: Icon(
+                          isDark ? Icons.light_mode : Icons.dark_mode,
+                          color: whiteClr,
+                        ),
+                        onPressed: ThemeHelper.toggleTheme,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -530,15 +572,15 @@ class _HomeChatScreenState extends State<HomeChatScreen>
           // Logo / round icon
           SvgPicture.asset(
             'assets/icons/logo-D.svg',
-            color: Colors.white,
+            color: whiteClr,
             width: 86,
             height: 86,
           ),
           const SizedBox(height: 26),
-          const Text(
+          Text(
             'How can I assist you?',
             style: TextStyle(
-              color: Colors.white,
+              color: whiteClr,
               fontSize: 22,
               fontWeight: FontWeight.w600,
             ),
@@ -550,7 +592,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
             margin: const EdgeInsets.symmetric(horizontal: 20),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             decoration: BoxDecoration(
-              color: const Color(0xFF2A3340),
+              color: drawerClr,
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
@@ -565,12 +607,12 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                 Expanded(
                   child: TextField(
                     controller: _inputController,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: whiteClr),
                     minLines: 1,
                     maxLines: 4,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Write your legal query here',
-                      hintStyle: TextStyle(color: Colors.white54),
+                      hintStyle: TextStyle(color: whiteClr.withOpacity(0.54)),
                       border: InputBorder.none,
                     ),
                     onSubmitted: (_) => _sendMessage(),
@@ -585,18 +627,26 @@ class _HomeChatScreenState extends State<HomeChatScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(height: 1, width: 60, color: Colors.white24),
-              const Padding(
+              Container(
+                height: 1,
+                width: 60,
+                color: whiteClr.withOpacity(0.24),
+              ),
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   'OR',
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: whiteClr.withOpacity(0.54),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              Container(height: 1, width: 60, color: Colors.white24),
+              Container(
+                height: 1,
+                width: 60,
+                color: whiteClr.withOpacity(0.24),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -606,19 +656,19 @@ class _HomeChatScreenState extends State<HomeChatScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2A3340),
+                color: drawerClr,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFF455168), width: 1.5),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.post_add, color: Colors.white),
+                  Icon(Icons.post_add, color: whiteClr),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Summarize a Document',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: whiteClr,
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
@@ -641,11 +691,11 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: Colors.white),
+            CircularProgressIndicator(color: whiteClr),
             const SizedBox(height: 16),
             Text(
               'Summarizing ${_pendingDocumentName ?? "document"}...',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: TextStyle(color: whiteClr, fontSize: 16),
             ),
           ],
         ),
@@ -663,8 +713,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               children: [
                 Text(
                   'Summary for ${_pendingDocumentName ?? "Document"}',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: whiteClr,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -673,7 +723,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2A3340),
+                    color: drawerClr,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -685,8 +735,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                   ),
                   child: Text(
                     _pendingDocumentSummary!,
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: whiteClr.withOpacity(0.70),
                       fontSize: 16,
                       height: 1.5,
                     ),
@@ -709,17 +759,24 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                           _pendingDocumentName = null;
                         });
                       },
-                      child: const Text(
+                      child: Text(
                         'Cancel',
-                        style: TextStyle(color: Colors.white54, fontSize: 16),
+                        style: TextStyle(
+                          color: whiteClr.withOpacity(0.54),
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
                     ElevatedButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
+                        await _ensureActiveConversationInitialized(
+                          initialMessage: 'Document: ${_pendingDocumentName}',
+                        );
                         setState(() {
                           _isDocumentMode = true;
                           _documentContext = _pendingDocumentSummary;
+
                           _messages.add(
                             ChatMessage(
                               text:
@@ -739,22 +796,25 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF455168),
+                        backgroundColor: ThemeHelper.buttonBgClr,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 14,
+                          horizontal: 34,
+                          vertical: 24,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.chat_bubble_outline,
-                        color: Colors.white,
+                        color: ThemeHelper.buttonTextClr,
                       ),
-                      label: const Text(
+                      label: Text(
                         'Continue as Chat',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        style: TextStyle(
+                          color: ThemeHelper.buttonTextClr,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ],
@@ -812,7 +872,16 @@ class _HomeChatScreenState extends State<HomeChatScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: lightPrimaryClr,
+                boxShadow: [
+                  // ThemeHeloper.buttonBgClr Shadow arround
+                  BoxShadow(
+                    color: ThemeHelper.buttonBgClr.withOpacity(0.5),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+                color: ThemeHelper.queryBoxClr,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
@@ -822,13 +891,15 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       constraints: const BoxConstraints(maxHeight: 160),
                       child: TextField(
                         controller: _inputController,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: whiteClr),
                         minLines: 1,
                         maxLines: 6,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           border: InputBorder.none,
                           hintText: 'Write your legal query here',
-                          hintStyle: TextStyle(color: Colors.white54),
+                          hintStyle: TextStyle(
+                            color: whiteClr.withOpacity(0.54),
+                          ),
                         ),
                         onSubmitted: (_) => _sendMessage(),
                       ),
@@ -871,10 +942,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                         color: iconBoxClr,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Colors.white,
-                      ),
+                      child: Icon(Icons.chevron_left, color: whiteClr),
                     ),
                   ),
                 ],
@@ -885,6 +953,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: ElevatedButton.icon(
+                iconAlignment: IconAlignment.end,
                 onPressed: () {
                   // reset state / new query
                   setState(() {
@@ -902,15 +971,20 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2A3340),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+                  backgroundColor: ThemeHelper.buttonBgClr,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                icon: const Icon(Icons.edit, color: Colors.white),
-                label: const Text(
-                  'New Query',
-                  style: TextStyle(color: Colors.white),
+                icon: Icon(Icons.edit, color: ThemeHelper.buttonTextClr),
+                label: Row(
+                  children: [
+                    Text(
+                      'New Query',
+                      style: TextStyle(color: ThemeHelper.buttonTextClr),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -922,15 +996,18 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2A3340),
+                  color: ThemeHelper.queryBoxClr,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const TextField(
+                child: TextField(
                   decoration: InputDecoration(
                     border: InputBorder.none,
-                    prefixIcon: Icon(Icons.search, color: Colors.white54),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: whiteClr.withOpacity(0.54),
+                    ),
                     hintText: 'Search',
-                    hintStyle: TextStyle(color: Colors.white54),
+                    hintStyle: TextStyle(color: whiteClr.withOpacity(0.54)),
                     contentPadding: EdgeInsets.all(12),
                   ),
                 ),
@@ -950,10 +1027,10 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       ),
                     )
                   : _conversations.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'No conversations yet',
-                        style: TextStyle(color: Colors.white54),
+                        style: TextStyle(color: whiteClr.withOpacity(0.54)),
                       ),
                     )
                   : ListView.builder(
@@ -969,8 +1046,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                           ),
                           decoration: BoxDecoration(
                             color: isActive
-                                ? const Color(0xFF3A4656)
-                                : const Color(0xFF2F3B48),
+                                ? ThemeHelper.buttonBgClr
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: ListTile(
@@ -983,10 +1060,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                               conv.title.isEmpty ? 'Conversation' : conv.title,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(color: whiteClr, fontSize: 13),
                             ),
                             onTap: () => _loadConversation(conv.id),
                             trailing: IconButton(
@@ -1004,16 +1078,28 @@ class _HomeChatScreenState extends State<HomeChatScreen>
             ),
             //Logout
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  TokenStore.clear();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.logout, color: Colors.redAccent),
                 label: const Text(
                   'Logout',
                   style: TextStyle(color: Colors.redAccent),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2A3340),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 24,
+                  ),
+                  backgroundColor: ThemeHelper.buttonBgClr,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1034,11 +1120,11 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       child: Container(
         width: 44,
         height: 44,
-        decoration: const BoxDecoration(
-          color: Color(0xFF455168),
+        decoration: BoxDecoration(
+          color: ThemeHelper.buttonBgClr,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white),
+        child: Icon(icon, color: ThemeHelper.buttonTextClr),
       ),
     );
   }

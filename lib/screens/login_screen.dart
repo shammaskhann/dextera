@@ -2,8 +2,6 @@ import 'dart:developer';
 
 import 'package:dextera/screens/components/custom_button.dart';
 import 'package:dextera/screens/components/custom_textfield.dart';
-import 'package:dextera/screens/home_chat_screen.dart';
-import 'package:dextera/screens/signup_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:dextera/core/app_theme.dart';
@@ -83,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       "Login",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: whiteClr,
                         fontSize: titleFontSize,
                         fontWeight: FontWeight.bold,
                       ),
@@ -92,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       "Seamlessly pick up where you left off \nManage your case files and continue tailoring your experience",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: whiteClr,
                         fontSize: subtitleFontSize,
                         height: 1.5,
                       ),
@@ -139,18 +137,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: EdgeInsets.symmetric(horizontal: dividerPadding),
                       child: Row(
                         children: [
-                          const Expanded(
-                            child: Divider(color: Colors.white, thickness: 1),
+                          Expanded(
+                            child: Divider(color: whiteClr, thickness: 1),
                           ),
-                          const Padding(
+                          Padding(
                             padding: EdgeInsets.symmetric(horizontal: 12),
                             child: Text(
                               "or",
-                              style: TextStyle(color: Colors.white70),
+                              style: TextStyle(color: whiteClr.withOpacity(0.70)),
                             ),
                           ),
-                          const Expanded(
-                            child: Divider(color: Colors.white, thickness: 1),
+                          Expanded(
+                            child: Divider(color: whiteClr, thickness: 1),
                           ),
                         ],
                       ),
@@ -177,14 +175,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         text: TextSpan(
                           text: "Dont have an account? ",
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: whiteClr.withOpacity(0.70),
                             fontSize: subtitleFontSize,
                           ),
-                          children: const [
+                          children: [
                             TextSpan(
                               text: "Sign Up",
                               style: TextStyle(
-                                color: Colors.white,
+                                color: whiteClr,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

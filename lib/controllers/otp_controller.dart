@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dextera/repository/auth_repository.dart';
 import 'package:dextera/models/auth_models.dart';
-import 'package:dextera/screens/home_chat_screen.dart';
 
 class OtpController extends ChangeNotifier {
   final AuthRepository _authRepository = AuthRepository();
