@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:dextera/models/conversation.dart';
 import 'package:flutter/foundation.dart';
@@ -10,8 +11,19 @@ class ChatRepository {
   static const String _baseUrl =
       'https://8000-01ke9hsffzevnjzywv4gx41ax2.cloudspaces.litng.ai';
 
+  /// SSE streaming timeout – 10 minutes for complex LLM queries.
+  static const Duration _streamTimeout = Duration(minutes: 10);
+
   /// Streams word/phrase chunks from the chat endpoint (SSE-style "data:" lines).
-  /// NOTE: The parsing/structuring of the SSE stream is intentionally left unchanged.
+  ///
+  /// The stream yields individual content tokens. Special signals:
+  ///  - `[DONE]` → ends the stream
+  ///  - `ERROR: <msg>` → throws an exception
+  ///  - `--RELEVANT JUDICIAL PRECEDENT--` → yielded as-is for delimiter handling
+  ///
+  /// An [AbortController]-style timeout of 10 minutes is applied via
+  /// [_streamTimeout]. On timeout, the stream ends gracefully with whatever
+  /// content has been accumulated.
   Stream<String> streamChat(
     String message, {
     required String conversationId,
@@ -40,32 +52,72 @@ class ChatRepository {
         })
         ..body = bodyString;
 
-      final response = await request.send();
+      final response = await request.send().timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw TimeoutException('Connection timed out');
+            },
+          );
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        throw Exception('Chat request failed (${response.statusCode}): $body');
+        // Try to extract 'detail' field from JSON error responses
+        String errorMessage;
+        try {
+          final jsonBody = jsonDecode(body) as Map<String, dynamic>;
+          errorMessage = jsonBody['detail']?.toString() ?? body;
+        } catch (_) {
+          errorMessage = body;
+        }
+        throw ChatException(
+          'Chat request failed (${response.statusCode})',
+          detail: errorMessage,
+          statusCode: response.statusCode,
+        );
       }
 
-      // Parse line-by-line SSE chunks. Only forward lines starting with "data:".
-      await for (final line
-          in response.stream
-              .transform(utf8.decoder)
-              .transform(const LineSplitter())) {
-        
+      // Parse line-by-line SSE chunks with timeout.
+      // Buffer approach: accumulate lines delimited by \n\n frames.
+      await for (final line in response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .timeout(
+        _streamTimeout,
+        onTimeout: (sink) {
+          log('SSE stream timed out after $_streamTimeout');
+          sink.close();
+        },
+      )) {
+        String? token;
+
         if (line.startsWith('data: ')) {
-          String token = line.replaceFirst('data: ', '');
-          if (token.toLowerCase() == '[done]') break;
-          // If token is empty but the line had 'data: ', it might have been 'data:  ' 
-          // However, replaceFirst will leave the remaining characters untouched.
-          yield token;
+          token = line.replaceFirst('data: ', '');
         } else if (line.startsWith('data:')) {
           // Handle cases where the backend sends 'data:' without a space
-          String token = line.replaceFirst('data:', '');
-          if (token.toLowerCase() == '[done]') break;
-          yield token;
+          token = line.replaceFirst('data:', '');
         }
+
+        if (token == null) continue;
+
+        // End signal
+        if (token.toLowerCase() == '[done]') break;
+
+        // Error signal from backend
+        if (token.startsWith('ERROR:')) {
+          throw ChatException(
+            token.replaceFirst('ERROR:', '').trim(),
+            isStreamError: true,
+          );
+        }
+
+        // Normal token (including delimiters like --RELEVANT JUDICIAL PRECEDENT--)
+        yield token;
       }
+    } on TimeoutException {
+      throw ChatException(
+        'Request timed out. Please try again.',
+        isTimeout: true,
+      );
     } catch (e) {
       // Silently handle null body errors from debug service
       if (e.toString().contains('Cannot send Null')) {
@@ -78,6 +130,7 @@ class ChatRepository {
   /// Fetch full conversation history for a given conversation id.
   Future<ConversationHistory> fetchConversation(String conversationId) async {
     try {
+      log("Conversation ID: $conversationId");
       final uri = Uri.parse('$_baseUrl/api/v1/conversation/$conversationId');
       final response = await http.get(uri);
 
@@ -133,13 +186,19 @@ class ChatRepository {
     String conversationId,
     PlatformFile file,
   ) async {
-    final uri = Uri.parse('$_baseUrl/api/v1/summarize?conversation_id=$conversationId');
+    final uri = Uri.parse(
+      '$_baseUrl/api/v1/summarize?conversation_id=$conversationId',
+    );
     final request = http.MultipartRequest('POST', uri);
 
     if (kIsWeb) {
       if (file.bytes != null) {
         request.files.add(
-          http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name),
+          http.MultipartFile.fromBytes(
+            'file',
+            file.bytes!,
+            filename: file.name,
+          ),
         );
       } else if (file.readStream != null) {
         request.files.add(
@@ -154,10 +213,9 @@ class ChatRepository {
         throw Exception('File bytes and readStream are null on Web');
       }
     } else {
-      if (file.path == null) throw Exception('File path is null on non-Web platform');
-      request.files.add(
-        await http.MultipartFile.fromPath('file', file.path!),
-      );
+      if (file.path == null)
+        throw Exception('File path is null on non-Web platform');
+      request.files.add(await http.MultipartFile.fromPath('file', file.path!));
     }
 
     final response = await request.send();
@@ -167,8 +225,45 @@ class ChatRepository {
       final jsonMap = jsonDecode(responseBody) as Map<String, dynamic>;
       return jsonMap;
     } else {
-      throw Exception('PDF upload failed (${response.statusCode}): $responseBody');
+      // Try to extract 'detail' field
+      String errorMessage;
+      try {
+        final jsonBody = jsonDecode(responseBody) as Map<String, dynamic>;
+        errorMessage = jsonBody['detail']?.toString() ?? responseBody;
+      } catch (_) {
+        errorMessage = responseBody;
+      }
+      throw ChatException(
+        'PDF upload failed (${response.statusCode})',
+        detail: errorMessage,
+        statusCode: response.statusCode,
+      );
     }
   }
 }
 
+/// Structured exception for chat-related errors with additional context.
+class ChatException implements Exception {
+  final String message;
+  final String? detail;
+  final int? statusCode;
+  final bool isTimeout;
+  final bool isStreamError;
+
+  ChatException(
+    this.message, {
+    this.detail,
+    this.statusCode,
+    this.isTimeout = false,
+    this.isStreamError = false,
+  });
+
+  /// Returns the most user-friendly error message available.
+  String get displayMessage => detail ?? message;
+
+  @override
+  String toString() {
+    if (detail != null) return '$message: $detail';
+    return message;
+  }
+}

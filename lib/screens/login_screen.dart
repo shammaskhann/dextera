@@ -144,7 +144,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             padding: EdgeInsets.symmetric(horizontal: 12),
                             child: Text(
                               "or",
-                              style: TextStyle(color: whiteClr.withOpacity(0.70)),
+                              style: TextStyle(
+                                color: whiteClr.withOpacity(0.70),
+                              ),
                             ),
                           ),
                           Expanded(
@@ -165,6 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         iconLink: "assets/icons/google.png",
                         onTap: () => _controller.continueWithGoogle(context),
                         isPrimary: false,
+                        isLoading: false,
                       ),
 
                     SizedBox(height: spacing),

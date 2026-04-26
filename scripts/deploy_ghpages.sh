@@ -8,14 +8,15 @@ set -euo pipefail
 # Configuration
 BRANCH=gh-pages
 BUILD_DIR=build/web
+BASE_HERF="/dextera/"
 WORKTREE_DIR=.gh-pages
 REMOTE=${REMOTE:-origin}
 
 echo "Starting web build + deploy to '${BRANCH}' (remote: ${REMOTE})"
 
 # 1) Build web
-echo "Running: flutter build web --release"
-flutter build web --release
+echo "Running: flutter build web --release --base-href=${BASE_HERF}"
+flutter build web --release --base-href=${BASE_HERF}
 
 # 2) Ensure remote exists and fetch
 git fetch ${REMOTE}

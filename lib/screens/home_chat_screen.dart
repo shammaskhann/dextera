@@ -9,6 +9,7 @@ import 'package:dextera/repository/chat_repository.dart';
 import 'package:dextera/repository/convo_repository.dart';
 import 'package:dextera/screens/components/message_bubble.dart';
 import 'package:dextera/screens/login_screen.dart';
+import 'package:dextera/utils/html_escape.dart';
 import 'package:dextera/utils/token_store.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -40,8 +41,12 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   String? _currentConversationId;
   final List<ConversationSummary> _conversations = [];
   bool _isLoadingConversations = false;
+  bool _isLoadingChat = false;
+  String? _deletingConversationId;
+  String? _loadingConversationId;
 
-  // Document mode state
+  // Document mode state – per-conversation context storage (Task 9)
+  final Map<String, _DocumentContext> _conversationDocContexts = {};
   bool _isDocumentMode = false;
   String? _documentContext;
 
@@ -55,6 +60,10 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   // Controls overlay drawer animation on tablet/mobile
   late final AnimationController _drawerAnimController;
   late final Animation<double> _drawerOpacity;
+
+  // Alert state (Task 10)
+  String? _alertMessage;
+  ChatAlertType _alertType = ChatAlertType.error;
 
   @override
   void initState() {
@@ -97,6 +106,29 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     });
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Alert Helpers (Task 10)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  void _showAlert(String message, {ChatAlertType type = ChatAlertType.error}) {
+    setState(() {
+      _alertMessage = message;
+      _alertType = type;
+    });
+  }
+
+  void _dismissAlert() {
+    if (mounted) {
+      setState(() {
+        _alertMessage = null;
+      });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Send Message (Task 11)
+  // ─────────────────────────────────────────────────────────────────────────
+
   Future<void> _sendMessage() async {
     if (_isStreaming) return; // prevent overlapping requests
 
@@ -104,8 +136,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     if (text.isEmpty) return;
 
     // If this is the first prompt (no messages yet), we want to open the
-    // drawer so the user can see topics/controls. Capture state before
-    // mutating _messages.
+    // drawer so the user can see topics/controls.
     final wasEmpty = _messages.isEmpty;
 
     // Ensure we have an active conversation id (from localhost convo API)
@@ -129,9 +160,15 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     _startStreamResponse(text);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // SSE Streaming (Task 5 & 11)
+  // ─────────────────────────────────────────────────────────────────────────
+
   void _startStreamResponse(String prompt) {
     _chatSub?.cancel();
-    _isStreaming = true;
+    setState(() {
+      _isStreaming = true;
+    });
 
     // Index of the assistant message we just added
     final assistantIndex = _messages.length - 1;
@@ -146,27 +183,62 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         .listen(
           (chunk) {
             setState(() {
-              _messages[assistantIndex].text += "$chunk ";
+              // Content accumulation: add space before chunk if needed
+              final current = _messages[assistantIndex].text;
+              String newText;
+              if (current.isNotEmpty &&
+                  !current.endsWith(' ') &&
+                  !current.endsWith('\n') &&
+                  !chunk.startsWith(' ') &&
+                  !chunk.startsWith('\n')) {
+                newText = current + ' ' + chunk;
+              } else {
+                newText = current + chunk;
+              }
+              // Format points to ensure they are on a new line (helps markdown renderer)
+              newText = newText.replaceAllMapped(
+                RegExp(r'([^\n])\s+(\*\s*\*\*)'),
+                (m) => '${m.group(1)}\n\n${m.group(2)}',
+              );
+              _messages[assistantIndex].text = newText;
             });
+            // Update display on every chunk (visual streaming effect)
             _scrollToBottom();
           },
           onError: (err) {
-            _isStreaming = false;
+            setState(() {
+              _isStreaming = false;
+            });
             if (!mounted) return;
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Chat error: $err')));
+
+            // Determine error message
+            String errorMsg;
+            if (err is ChatException) {
+              if (err.isTimeout) {
+                errorMsg = 'Request timed out. Please try again.';
+              } else {
+                errorMsg = err.displayMessage;
+              }
+            } else {
+              errorMsg = err.toString();
+            }
+            _showAlert(errorMsg);
           },
           onDone: () {
             log('Chat stream done');
             log('Final message: ${_messages[assistantIndex].text}');
-            _isStreaming = false;
+            setState(() {
+              _isStreaming = false;
+            });
           },
           cancelOnError: true,
         );
   }
 
-  // Ensure we have a conversation id (from localhost) and a corresponding summary entry.
+  // ─────────────────────────────────────────────────────────────────────────
+  // Conversation Management
+  // ─────────────────────────────────────────────────────────────────────────
+
   Future<void> _ensureActiveConversationInitialized({
     String? initialMessage,
   }) async {
@@ -193,9 +265,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       _currentConversationId = created.id;
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create conversation: $e')),
-      );
+      _showAlert('Failed to create conversation: $e');
       rethrow;
     }
   }
@@ -207,39 +277,83 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   }
 
   Future<void> _loadConversation(String conversationId) async {
+    setState(() {
+      _isLoadingChat = true;
+      _loadingConversationId = conversationId;
+    });
     try {
       final history = await _chatRepository.fetchConversation(conversationId);
+
+      // Track the last document summary so we can restore document mode
+      String? lastDocSummary;
+      String? lastDocName;
+
+      final loadedMessages = history.messages.map((m) {
+        if (m.type == 'document_summary') {
+          lastDocSummary = m.content;
+          lastDocName = m.filename;
+          return ChatMessage(
+            text: m.content,
+            isUser: false,
+            messageType: 'document_summary',
+            documentName: m.filename,
+            metadata: m.metadata,
+          );
+        }
+        return ChatMessage(
+          text: m.content,
+          isUser: m.role.toLowerCase() == 'user',
+        );
+      }).toList();
+
       setState(() {
         _currentConversationId = conversationId;
-        _isDocumentMode = false;
-        _documentContext = null;
         _messages
           ..clear()
-          ..addAll(
-            history.messages
-                .map(
-                  (m) => ChatMessage(
-                    text: m.content,
-                    isUser: m.role.toLowerCase() == 'user',
-                  ),
-                )
-                .toList(),
+          ..addAll(loadedMessages);
+
+        // Restore document context per conversation (Task 9)
+        final savedCtx = _conversationDocContexts[conversationId];
+        if (savedCtx != null) {
+          _isDocumentMode = true;
+          _documentContext = savedCtx.summary;
+        } else if (lastDocSummary != null) {
+          _isDocumentMode = true;
+          _documentContext = lastDocSummary;
+          // Store for future switches
+          _conversationDocContexts[conversationId] = _DocumentContext(
+            filename: lastDocName ?? 'Document',
+            summary: lastDocSummary!,
           );
+        } else {
+          _isDocumentMode = false;
+          _documentContext = null;
+        }
+        _isLoadingChat = false;
+        _loadingConversationId = null;
       });
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load conversation: $e')),
-      );
+      setState(() {
+        _isLoadingChat = false;
+        _loadingConversationId = null;
+      });
+      _showAlert('Failed to load conversation: $e');
     }
   }
 
   Future<void> _deleteConversation(String conversationId) async {
+    setState(() {
+      _deletingConversationId = conversationId;
+    });
     try {
       await _convoRepository.delete(conversationId: conversationId);
+      if (!mounted) return;
       setState(() {
+        _deletingConversationId = null;
         _conversations.removeWhere((c) => c.id == conversationId);
+        _conversationDocContexts.remove(conversationId);
         if (_currentConversationId == conversationId) {
           _currentConversationId = null;
           _isDocumentMode = false;
@@ -249,9 +363,10 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete conversation: $e')),
-      );
+      setState(() {
+        _deletingConversationId = null;
+      });
+      _showAlert('Failed to delete conversation: $e');
     }
   }
 
@@ -296,9 +411,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to fetch conversations: $e')),
-      );
+      _showAlert('Failed to fetch conversations: $e');
     } finally {
       if (!mounted) return;
       setState(() {
@@ -310,13 +423,46 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent + 120,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (maxScroll > 0) {
+          if (_isStreaming) {
+            _scrollController.jumpTo(maxScroll);
+          } else {
+            _scrollController.animateTo(
+              maxScroll,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        }
       }
     });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PDF Upload & Document Context (Task 9)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Activates document mode for the current conversation.
+  void _activateDocumentContext(ChatMessage m) {
+    setState(() {
+      _isDocumentMode = true;
+      _documentContext = m.text;
+      if (_currentConversationId != null) {
+        _conversationDocContexts[_currentConversationId!] = _DocumentContext(
+          filename: m.documentName ?? 'Document',
+          summary: m.text,
+        );
+      }
+      _messages.add(
+        ChatMessage(
+          text:
+              'Now discussing: ${m.documentName ?? "Document"}. Your follow-up questions will be answered based on this document.',
+          isUser: false,
+        ),
+      );
+    });
+    _scrollToBottom();
   }
 
   Future<void> _uploadPdf() async {
@@ -330,45 +476,93 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       if (result == null || result.files.isEmpty) return;
 
       final file = result.files.first;
+      final bool isOngoingConversation =
+          _messages.isNotEmpty && _currentConversationId != null;
 
-      setState(() {
-        _isSummarizing = true;
-        _pendingDocumentSummary = null;
-        _pendingDocumentName = file.name;
-        _messages.clear(); // Ensure we don't show the chat view
-      });
+      if (isOngoingConversation) {
+        // ── In-conversation flow: inline summary ──
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: 'Summarizing ${file.name}...',
+              isUser: false,
+              messageType: 'loading',
+              documentName: file.name,
+            ),
+          );
+        });
+        _scrollToBottom();
 
-      // await _ensureActiveConversationInitialized(
-      //   initialMessage: 'Document: ${file.name}',
-      // );
-      if (_currentConversationId == null) {
+        final response = await _chatRepository.summarizePdf(
+          _currentConversationId!,
+          file,
+        );
+        final summary = response['summary'] ?? 'No summary returned';
+
+        if (!mounted) return;
+        setState(() {
+          // Replace the loading placeholder with the real summary card
+          final loadingIdx = _messages.lastIndexWhere(
+            (m) => m.messageType == 'loading',
+          );
+          if (loadingIdx != -1) {
+            _messages[loadingIdx] = ChatMessage(
+              text: summary,
+              isUser: false,
+              messageType: 'document_summary',
+              documentName: file.name,
+            );
+          }
+        });
+        _scrollToBottom();
+      } else {
+        // ── Standalone flow (empty state): full-screen summary view ──
+        setState(() {
+          _isSummarizing = true;
+          _pendingDocumentSummary = null;
+          _pendingDocumentName = file.name;
+        });
+
+        await _ensureActiveConversationInitialized(
+          initialMessage: 'Document: ${file.name}',
+        );
+        if (_currentConversationId == null) {
+          setState(() {
+            _isSummarizing = false;
+          });
+          return;
+        }
+
+        final response = await _chatRepository.summarizePdf(
+          _currentConversationId!,
+          file,
+        );
+        final summary = response['summary'] ?? 'No summary returned';
+
+        if (!mounted) return;
         setState(() {
           _isSummarizing = false;
+          _pendingDocumentSummary = summary;
         });
-        return;
       }
-
-      final response = await _chatRepository.summarizePdf(
-        _currentConversationId!,
-        file,
-      );
-      final summary = response['summary'] ?? 'No summary returned';
-
-      if (!mounted) return;
-      setState(() {
-        _isSummarizing = false;
-        _pendingDocumentSummary = summary;
-      });
     } catch (e) {
       if (mounted) {
         setState(() {
           _isSummarizing = false;
           _pendingDocumentSummary = null;
           _pendingDocumentName = null;
+          // Remove any loading placeholders on error
+          _messages.removeWhere((m) => m.messageType == 'loading');
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error uploading PDF: $e')));
+
+        // Extract meaningful error message
+        String errorMsg;
+        if (e is ChatException) {
+          errorMsg = e.displayMessage;
+        } else {
+          errorMsg = e.toString();
+        }
+        _showAlert('Error uploading PDF: $errorMsg');
       }
     }
   }
@@ -377,6 +571,10 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   bool _isMobile(double w) => w < 700;
   bool _isTablet(double w) => w >= 700 && w < 1024;
   bool _isDesktop(double w) => w >= 1024;
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // BUILD
+  // ═════════════════════════════════════════════════════════════════════════
 
   @override
   Widget build(BuildContext context) {
@@ -388,9 +586,6 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         final isTablet = _isTablet(w);
         final isDesktop = _isDesktop(w);
 
-        // Drawer visibility is controlled by `_drawerOpen` for all breakpoints.
-        // Desktop no longer forces the drawer open — it starts closed until the
-        // user opens it or sends the first prompt.
         final leftPanelVisible = _drawerOpen;
 
         return Scaffold(
@@ -433,33 +628,65 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                 children: [
                   // ===========================
                   // LEFT PERSISTENT DRAWER (desktop)
-                  // Only show when the drawer has been opened by the user
                   // ===========================
                   if (isDesktop && leftPanelVisible)
                     SizedBox(width: 320, child: _buildDrawerColumn()),
 
                   // ===========================
                   // MAIN CONTENT AREA
-                  // - If no messages => centered initial state
-                  // - If messages => active chat layout
                   // ===========================
                   Expanded(
-                    child: (_isSummarizing || _pendingDocumentSummary != null)
-                        ? _buildSummaryState(isMobile, isTablet, isDesktop)
-                        : _messages.isEmpty
-                        ? _buildInitialCenteredState(
-                            isMobile,
-                            isTablet,
-                            isDesktop,
-                          )
-                        : _buildActiveChatState(isMobile, isTablet, isDesktop),
+                    child: Column(
+                      children: [
+                        // Document mode banner (Task 9)
+                        if (_isDocumentMode &&
+                            _currentConversationId != null &&
+                            _messages.isNotEmpty)
+                          _buildDocumentModeBanner(),
+
+                        // Alert display (Task 10)
+                        if (_alertMessage != null)
+                          ChatAlert(
+                            message: _alertMessage!,
+                            type: _alertType,
+                            onDismiss: _dismissAlert,
+                          ),
+
+                        // Main content
+                        Expanded(
+                          child: _isLoadingChat
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : (_isSummarizing ||
+                                    _pendingDocumentSummary != null)
+                              ? _buildSummaryState(
+                                  isMobile,
+                                  isTablet,
+                                  isDesktop,
+                                )
+                              : _messages.isEmpty
+                              ? _buildInitialCenteredState(
+                                  isMobile,
+                                  isTablet,
+                                  isDesktop,
+                                )
+                              : _buildActiveChatState(
+                                  isMobile,
+                                  isTablet,
+                                  isDesktop,
+                                ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
 
               // ===========================
               // OVERLAY SLIDE-IN DRAWER (mobile/tablet T2)
-              // Show when _drawerOpen && not desktop
               // ===========================
               if (!isDesktop && leftPanelVisible)
                 Positioned.fill(
@@ -509,12 +736,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       child: IconButton(
                         icon: _drawerOpen
                             ? SizedBox.shrink()
-                            : SvgPicture.asset(
-                                'assets/icons/drawer.svg',
-                                //color: whiteClr,
-                                //  width: 20,
-                                // height: 20,
-                              ),
+                            : SvgPicture.asset('assets/icons/drawer.svg'),
                         onPressed: () {
                           if (_drawerOpen) {
                             _closeDrawer();
@@ -548,6 +770,68 @@ class _HomeChatScreenState extends State<HomeChatScreen>
           ),
         );
       },
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Document Mode Banner (Task 9)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildDocumentModeBanner() {
+    final ctx = _conversationDocContexts[_currentConversationId];
+    final filename = ctx?.filename ?? 'Document';
+    final escapedName = HtmlEscape.escape(filename);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFD4A843).withOpacity(0.12),
+            const Color(0xFFD4A843).withOpacity(0.04),
+          ],
+        ),
+        border: Border(
+          bottom: BorderSide(color: const Color(0xFFD4A843).withOpacity(0.2)),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.description_outlined,
+            color: Color(0xFFD4A843),
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Answering based on $escapedName. RAG disabled.',
+              style: TextStyle(
+                color: const Color(0xFFD4A843),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isDocumentMode = false;
+                _documentContext = null;
+                if (_currentConversationId != null) {
+                  _conversationDocContexts.remove(_currentConversationId);
+                }
+              });
+            },
+            child: Icon(
+              Icons.close,
+              color: const Color(0xFFD4A843).withOpacity(0.6),
+              size: 18,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -611,7 +895,9 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     minLines: 1,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: 'Write your legal query here',
+                      hintText: _isDocumentMode
+                          ? "Ask about '${_conversationDocContexts[_currentConversationId]?.filename ?? "document"}'..."
+                          : 'Write your legal query here',
                       hintStyle: TextStyle(color: whiteClr.withOpacity(0.54)),
                       border: InputBorder.none,
                     ),
@@ -712,7 +998,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Summary for ${_pendingDocumentName ?? "Document"}',
+                  'Summary for ${HtmlEscape.escape(_pendingDocumentName ?? "Document")}',
                   style: TextStyle(
                     color: whiteClr,
                     fontSize: 24,
@@ -776,6 +1062,15 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                         setState(() {
                           _isDocumentMode = true;
                           _documentContext = _pendingDocumentSummary;
+
+                          // Store document context
+                          if (_currentConversationId != null) {
+                            _conversationDocContexts[_currentConversationId!] =
+                                _DocumentContext(
+                                  filename: _pendingDocumentName ?? 'Document',
+                                  summary: _pendingDocumentSummary!,
+                                );
+                          }
 
                           _messages.add(
                             ChatMessage(
@@ -848,11 +1143,24 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.symmetric(vertical: 20),
-                itemCount: _messages.length,
+                itemCount: _messages.length + (_isStreaming ? 0 : 0),
                 itemBuilder: (context, index) {
                   final m = _messages[index];
-                  log(m.text);
-                  return BuildMessageBubble(m, context);
+                  // Route to special widgets based on message type (Task 1)
+                  switch (m.displayType) {
+                    case MessageDisplayType.documentSummary:
+                      return BuildDocumentSummaryCard(
+                        message: m,
+                        isDocumentModeActive:
+                            _isDocumentMode && _documentContext == m.text,
+                        onDiscuss: () => _activateDocumentContext(m),
+                      );
+                    case MessageDisplayType.loading:
+                      return _buildLoadingBubble(m);
+                    case MessageDisplayType.user:
+                    case MessageDisplayType.assistant:
+                      return BuildMessageBubble(m, context);
+                  }
                 },
               ),
             ),
@@ -873,7 +1181,6 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 boxShadow: [
-                  // ThemeHeloper.buttonBgClr Shadow arround
                   BoxShadow(
                     color: ThemeHelper.buttonBgClr.withOpacity(0.5),
                     blurRadius: 10,
@@ -886,6 +1193,9 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               ),
               child: Row(
                 children: [
+                  // PDF attachment button
+                  _roundIconButton(Icons.attach_file, _uploadPdf),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxHeight: 160),
@@ -894,9 +1204,12 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                         style: TextStyle(color: whiteClr),
                         minLines: 1,
                         maxLines: 6,
+                        enabled: !_isStreaming,
                         decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: 'Write your legal query here',
+                          hintText: _isDocumentMode
+                              ? "Ask about '${_conversationDocContexts[_currentConversationId]?.filename ?? "document"}'..."
+                              : 'Write your legal query here',
                           hintStyle: TextStyle(
                             color: whiteClr.withOpacity(0.54),
                           ),
@@ -906,13 +1219,67 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  _roundIconButton(Icons.send, _sendMessage),
+                  _isStreaming
+                      ? SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: whiteClr.withOpacity(0.6),
+                              ),
+                            ),
+                          ),
+                        )
+                      : _roundIconButton(Icons.send, _sendMessage),
                 ],
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  // ----------------------------
+  // Loading bubble (shown while summarizing in-conversation)
+  // ----------------------------
+  Widget _buildLoadingBubble(ChatMessage m) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              color: drawerClr,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: whiteClr,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  m.text,
+                  style: TextStyle(color: whiteClr.withOpacity(0.70)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1016,7 +1383,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
 
             const SizedBox(height: 18),
 
-            // Conversation history list
+            // Conversation history list (Task 7)
             Expanded(
               child: _isLoadingConversations
                   ? const Center(
@@ -1039,6 +1406,15 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       itemBuilder: (context, index) {
                         final conv = _conversations[index];
                         final isActive = conv.id == _currentConversationId;
+                        final hasDocCtx = _conversationDocContexts.containsKey(
+                          conv.id,
+                        );
+
+                        // Escaped title for safe display
+                        final displayTitle = conv.title.isEmpty
+                            ? 'Conversation'
+                            : HtmlEscape.truncate(conv.title, maxLength: 60);
+
                         return Container(
                           margin: const EdgeInsets.symmetric(
                             vertical: 4,
@@ -1056,21 +1432,47 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                               horizontal: 10,
                               vertical: 4,
                             ),
+                            leading: hasDocCtx
+                                ? const Icon(
+                                    Icons.description_outlined,
+                                    color: Color(0xFFD4A843),
+                                    size: 18,
+                                  )
+                                : null,
                             title: Text(
-                              conv.title.isEmpty ? 'Conversation' : conv.title,
+                              displayTitle,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(color: whiteClr, fontSize: 13),
                             ),
                             onTap: () => _loadConversation(conv.id),
-                            trailing: IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                size: 18,
-                                color: Colors.redAccent,
-                              ),
-                              onPressed: () => _deleteConversation(conv.id),
-                            ),
+                            trailing: _loadingConversationId == conv.id
+                                ? SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: whiteClr,
+                                    ),
+                                  )
+                                : _deletingConversationId == conv.id
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.redAccent,
+                                    ),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                      color: Colors.redAccent,
+                                    ),
+                                    onPressed: () =>
+                                        _deleteConversation(conv.id),
+                                  ),
                           ),
                         );
                       },
@@ -1128,4 +1530,15 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       ),
     );
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Document Context storage model (Task 9)
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _DocumentContext {
+  final String filename;
+  final String summary;
+
+  const _DocumentContext({required this.filename, required this.summary});
 }
