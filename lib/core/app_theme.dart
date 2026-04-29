@@ -33,6 +33,8 @@ class ThemeHelper {
   static const Color _lightLightGreenClr = Color(0xFF10B981);
   static const Color _lightWhiteClr = Color(0xFF111827);
 
+  static const Color _lightYellowClr = Color(0xFFF59E0B);
+
   // Getters for specific colors depending on the active theme mode
   static Color get backgroundClr =>
       isDarkMode ? _darkBackgroundClr : _lightBackgroundClr;
@@ -61,6 +63,19 @@ class ThemeHelper {
 
   static get myMessageBubble =>
       isDarkMode ? _darkLightPrimaryClr : const Color(0xFFD8E2FC);
+
+  static get logoUrl =>
+      isDarkMode ? "assets/icons/logo-D.svg" : 'assets/icons/logo-D-dark.svg';
+
+  static Color get successColor => _lightLightGreenClr;
+
+  static Color get errorColor => _lightLightPinkClr;
+
+  static Color get warningColor => _lightYellowClr;
+
+  static Color get infoColor => _lightLightBlueClr;
+
+  static Color get tertiaryColor => _lightLightBlueClr;
 }
 
 // Global getters for backward compatibility throughout the project

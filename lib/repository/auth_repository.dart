@@ -74,7 +74,8 @@ class AuthRepository {
       }
 
       final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
-      log(jsonResponse.toString());
+      log('Response body: ${response.body}');
+      log(jsonResponse.toString(), name: 'jsonResponse REGISTER');
       if (response.statusCode == 200) {
         return LoginResponse.fromJson(jsonResponse);
       } else {
@@ -107,8 +108,14 @@ class AuthRepository {
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
-      log('Response status: ${response.statusCode}');
-      log('Response body: ${response.body}');
+      log(
+        'Response status: ${response.statusCode}',
+        name: 'Response status GOOGLE LOGIN',
+      );
+      log(
+        'Response body: ${response.body}',
+        name: 'Response body GOOGLE LOGIN',
+      );
 
       // Check if response body is null or empty
       if (response.body.isEmpty) {
@@ -154,7 +161,7 @@ class AuthRepository {
       }
 
       final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
-      log(jsonResponse.toString());
+      log('Response body: ${response.body}', name: 'Response body VERIFY OTP');
       if (response.statusCode == 200) {
         return ApiResponse.fromJson(jsonResponse);
       } else {
@@ -202,7 +209,7 @@ class AuthRepository {
       }
 
       final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
-      log(jsonResponse.toString());
+      log('Response body: ${response.body}', name: 'Response body RESEND OTP');
       if (response.statusCode == 200) {
         return ApiResponse.fromJson(jsonResponse);
       } else {

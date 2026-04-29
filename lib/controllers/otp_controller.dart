@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dextera/repository/auth_repository.dart';
 import 'package:dextera/models/auth_models.dart';
+import 'package:dextera/utils/snackbar_utils.dart';
 
 class OtpController extends ChangeNotifier {
   final AuthRepository _authRepository = AuthRepository();
@@ -17,9 +18,7 @@ class OtpController extends ChangeNotifier {
       _errorMessage = 'Please enter a valid 6-digit OTP';
       notifyListeners();
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+        CustomSnackBar.showError(context, error: _errorMessage!);
       }
       return;
     }
@@ -46,9 +45,7 @@ class OtpController extends ChangeNotifier {
         _errorMessage = response.message;
         notifyListeners();
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(response.message)));
+          CustomSnackBar.showError(context, error: response.message);
         }
       }
     } catch (e) {
@@ -56,9 +53,7 @@ class OtpController extends ChangeNotifier {
       _errorMessage = e.toString();
       notifyListeners();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_errorMessage ?? 'OTP verification failed')),
-        );
+        CustomSnackBar.showError(context, error: e);
       }
     }
   }
@@ -77,17 +72,13 @@ class OtpController extends ChangeNotifier {
 
       if (response.status) {
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(response.message)));
+          CustomSnackBar.showSuccess(context, message: response.message);
         }
       } else {
         _errorMessage = response.message;
         notifyListeners();
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(response.message)));
+          CustomSnackBar.showError(context, error: response.message);
         }
       }
     } catch (e) {
@@ -95,9 +86,7 @@ class OtpController extends ChangeNotifier {
       _errorMessage = e.toString();
       notifyListeners();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_errorMessage ?? 'Failed to resend OTP')),
-        );
+        CustomSnackBar.showError(context, error: e);
       }
     }
   }

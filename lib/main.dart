@@ -1,5 +1,6 @@
 import 'package:dextera/core/app_theme.dart';
 import 'package:dextera/screens/signup_screen.dart';
+import 'package:dextera/screens/user_info_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -8,13 +9,26 @@ import 'package:dextera/screens/home_chat_screen.dart';
 import 'package:dextera/screens/login_screen.dart';
 import 'package:dextera/screens/otp_verify_screen.dart';
 import 'package:dextera/utils/token_store.dart';
+import 'package:dextera/utils/user_store.dart';
 import 'dart:math' as math;
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
   await TokenStore.init();
+  await UserStore.init();
+
+  // Load saved theme preference
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final isDarkMode = prefs.getBool('theme_dark_mode') ?? true;
+    ThemeHelper.isDarkModeNotifier.value = isDarkMode;
+  } catch (e) {
+    // Default to dark mode if error
+    ThemeHelper.isDarkModeNotifier.value = true;
+  }
 
   // Suppress debug service errors
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -60,6 +74,9 @@ class MyApp extends StatelessWidget {
                 break;
               case '/chat':
                 page = const HomeChatScreen();
+                break;
+              case '/user-info':
+                page = const UserInfoScreen();
                 break;
               case '/otp':
                 final email = settings.arguments as String?;
@@ -120,18 +137,22 @@ class _SplashScreenState extends State<SplashScreen>
       if (status == AnimationStatus.completed) {
         // small delay to ensure final frame settles
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.of(context).push(
-            PageRouteBuilder(
-              settings: const RouteSettings(name: '/onboarding'),
-              opaque: false,
-              pageBuilder: (context, animation, secondaryAnimation) {
-                // pass useBackground=false to avoid duplicating background
-                return const OnboardingScreen(useBackground: true);
-              },
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
-            ),
-          );
+          if (TokenStore.token != null && TokenStore.token!.isNotEmpty) {
+            Navigator.of(context).pushReplacementNamed('/chat');
+          } else {
+            Navigator.of(context).push(
+              PageRouteBuilder(
+                settings: const RouteSettings(name: '/onboarding'),
+                opaque: false,
+                pageBuilder: (context, animation, secondaryAnimation) {
+                  // pass useBackground=false to avoid duplicating background
+                  return const OnboardingScreen(useBackground: true);
+                },
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
+              ),
+            );
+          }
         });
       }
     });

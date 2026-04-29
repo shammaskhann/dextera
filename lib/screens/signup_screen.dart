@@ -51,20 +51,49 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 40),
 
               // --- Text fields ---
-              CustomTextField(hint: "Username", controller: usernameController),
-              CustomTextField(
-                hint: "Email Address",
-                controller: emailController,
-              ),
-              CustomTextField(
-                hint: "Password",
-                controller: passwordController,
-                obscureText: true,
-              ),
-              CustomTextField(
-                hint: "Confirm Password",
-                controller: confirmController,
-                obscureText: true,
+              ListenableBuilder(
+                listenable: _controller,
+                builder: (context, _) {
+                  return Column(
+                    children: [
+                      CustomTextField(
+                        hint: "Enter your username",
+                        label: "Username",
+                        controller: usernameController,
+                        errorText: _controller.usernameError,
+                        onChanged: (val) => _controller.validateUsername(val),
+                      ),
+                      CustomTextField(
+                        hint: "e.g. name@example.com",
+                        label: "Email Address",
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        errorText: _controller.emailError,
+                        onChanged: (val) => _controller.validateEmail(val),
+                      ),
+                      CustomTextField(
+                        hint: "Minimum 6 characters",
+                        label: "Password",
+                        controller: passwordController,
+                        obscureText: true,
+                        errorText: _controller.passwordError,
+                        onChanged: (val) => _controller.validatePassword(val),
+                      ),
+                      CustomTextField(
+                        hint: "Repeat your password",
+                        label: "Confirm Password",
+                        controller: confirmController,
+                        obscureText: true,
+                        errorText: _controller.confirmPasswordError,
+                        onChanged:
+                            (val) => _controller.validateConfirmPassword(
+                              val,
+                              passwordController.text,
+                            ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 25),
 
@@ -91,43 +120,26 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 25),
 
-              // --- Divider with OR ---
-              Row(
-                children: [
-                  Expanded(child: Divider(color: whiteClr, thickness: 1)),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text("or", style: TextStyle(color: whiteClr.withOpacity(0.70))),
-                  ),
-                  Expanded(child: Divider(color: whiteClr, thickness: 1)),
-                ],
-              ),
-              const SizedBox(height: 25),
-
-              // --- Google Button ---
-              CustomButton(
-                label: "Continue with Google",
-                iconLink: "assets/icons/google.png",
-                onTap: () {
-                  _controller.continueWithGoogle(context);
-                },
-                isPrimary: false,
-              ),
-
               const SizedBox(height: 30),
-              RichText(
-                text: TextSpan(
-                  text: "Already have an account? ",
-                  style: TextStyle(color: whiteClr.withOpacity(0.70), fontSize: 14),
-                  children: [
-                    TextSpan(
-                      text: "Login",
-                      style: TextStyle(
-                        color: whiteClr,
-                        fontWeight: FontWeight.w600,
-                      ),
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: RichText(
+                  text: TextSpan(
+                    text: "Already have an account? ",
+                    style: TextStyle(
+                      color: whiteClr.withOpacity(0.70),
+                      fontSize: 14,
                     ),
-                  ],
+                    children: [
+                      TextSpan(
+                        text: "Login",
+                        style: TextStyle(
+                          color: whiteClr,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 20),

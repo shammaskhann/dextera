@@ -61,6 +61,7 @@ class User {
   final String? name;
   final String email;
   final bool? verified;
+  final bool? mailLoggedIn;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -68,6 +69,7 @@ class User {
     this.id,
     this.name,
     required this.email,
+    this.mailLoggedIn = false,
     this.verified,
     this.createdAt,
     this.updatedAt,
@@ -78,6 +80,7 @@ class User {
       id: json['id'],
       name: json['name'],
       email: json['email'] ?? '',
+      mailLoggedIn: json['mailLoggedIn'] ?? false,
       verified: json['verified'],
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())

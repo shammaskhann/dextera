@@ -142,4 +142,46 @@ class ConvoRepository {
       rethrow;
     }
   }
+
+  Future<LocalConversation> rename({
+    required String conversationId,
+    required String title,
+  }) async {
+    try {
+      final body = jsonEncode({'conversationId': conversationId, 'title': title});
+      final headers = _headers();
+
+      log('Renaming conversation at: ${api.convoRename}');
+
+      final response = await http
+          .put(Uri.parse(api.convoRename), headers: headers, body: body)
+          .timeout(const Duration(seconds: 15));
+
+      if (response.body.isEmpty) {
+        log('Error: Empty response body from server');
+        throw Exception('Server returned empty response');
+      }
+
+      final jsonMap = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode == 200 && (jsonMap['status'] == true)) {
+        return LocalConversation.fromJson(
+          jsonMap['data'] as Map<String, dynamic>,
+        );
+      }
+
+      final errorMsg =
+          jsonMap['message'] ??
+          'Failed to rename conversation (${response.statusCode})';
+      log('API Error in rename: $errorMsg');
+      throw Exception(errorMsg);
+    } on FormatException catch (e) {
+      log('JSON parse error in rename: $e');
+      throw Exception('Invalid server response format');
+    } catch (e, stack) {
+      log('Unexpected error in rename: $e');
+      log(stack.toString());
+      rethrow;
+    }
+  }
 }

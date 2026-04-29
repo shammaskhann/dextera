@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:dextera/repository/auth_repository.dart';
 import 'package:dextera/models/auth_models.dart';
 import 'package:dextera/utils/token_store.dart';
+import 'package:dextera/utils/user_store.dart';
+import 'package:dextera/utils/snackbar_utils.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginController extends ChangeNotifier {
@@ -12,8 +14,43 @@ class LoginController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // Field-specific errors
+  String? _emailError;
+  String? _passwordError;
+
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  String? get emailError => _emailError;
+  String? get passwordError => _passwordError;
+
+  void validateEmail(String value) {
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (value.isEmpty) {
+      _emailError = 'Email is required';
+    } else if (!emailRegex.hasMatch(value)) {
+      _emailError = 'Enter a valid email';
+    } else {
+      _emailError = null;
+    }
+    notifyListeners();
+  }
+
+  void validatePassword(String value) {
+    if (value.isEmpty) {
+      _passwordError = 'Password is required';
+    } else if (value.length < 6) {
+      _passwordError = 'At least 6 characters';
+    } else {
+      _passwordError = null;
+    }
+    notifyListeners();
+  }
+
+  bool validateAll(String email, String password) {
+    validateEmail(email);
+    validatePassword(password);
+    return _emailError == null && _passwordError == null;
+  }
 
   // ── Web: initialize + return the stream ──────────────────────────────────
   Stream<GoogleSignInAccount?>? initializeForWeb() {
@@ -54,9 +91,7 @@ class LoginController extends ChangeNotifier {
       _errorMessage = e.toString();
       notifyListeners();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_errorMessage ?? 'Google Login failed')),
-        );
+        CustomSnackBar.showError(context, error: e);
       }
     }
   }
@@ -90,6 +125,9 @@ class LoginController extends ChangeNotifier {
 
       if (response.status && response.token.isNotEmpty) {
         TokenStore.token = response.token;
+        if (response.user != null) {
+          UserStore.user = response.user;
+        }
         // Navigation handled in UI layer via errorMessage == null check
       } else {
         _errorMessage = response.message;
@@ -97,9 +135,7 @@ class LoginController extends ChangeNotifier {
 
         if (context != null && context.mounted) {
           log('Google login failed: ${response.message}');
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(response.message)));
+          CustomSnackBar.showError(context, error: response.message);
         }
       }
     } catch (e) {
@@ -109,9 +145,7 @@ class LoginController extends ChangeNotifier {
       notifyListeners();
 
       if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_errorMessage ?? 'Google Login failed')),
-        );
+        CustomSnackBar.showError(context, error: e);
       }
     }
   }
@@ -122,8 +156,8 @@ class LoginController extends ChangeNotifier {
     String password,
     BuildContext context,
   ) async {
-    if (email.isEmpty || password.isEmpty) {
-      _errorMessage = 'Please fill in all fields';
+    if (!validateAll(email, password)) {
+      _errorMessage = 'Please fix the errors above';
       notifyListeners();
       return;
     }
@@ -141,6 +175,9 @@ class LoginController extends ChangeNotifier {
 
       if (response.status && response.token.isNotEmpty) {
         TokenStore.token = response.token;
+        if (response.user != null) {
+          UserStore.user = response.user;
+        }
         if (context.mounted) {
           if (response.user?.verified ?? false) {
             Navigator.of(context).pushNamed('/chat');
@@ -150,9 +187,7 @@ class LoginController extends ChangeNotifier {
         _errorMessage = response.message;
         notifyListeners();
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(response.message)));
+          CustomSnackBar.showError(context, error: response.message);
         }
       }
     } catch (e) {
@@ -160,9 +195,7 @@ class LoginController extends ChangeNotifier {
       _errorMessage = e.toString();
       notifyListeners();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_errorMessage ?? 'Login failed')),
-        );
+        CustomSnackBar.showError(context, error: e);
       }
     }
   }

@@ -8,7 +8,7 @@ set -euo pipefail
 # Configuration
 BRANCH=gh-pages
 BUILD_DIR=build/web
-BASE_HERF="/dextera/"
+BASE_HERF="/"
 WORKTREE_DIR=.gh-pages
 REMOTE=${REMOTE:-origin}
 
@@ -46,6 +46,7 @@ git worktree add ${WORKTREE_DIR} ${REMOTE}/${BRANCH}
 echo "Clearing ${WORKTREE_DIR} and copying ${BUILD_DIR} -> ${WORKTREE_DIR}"
 rm -rf ${WORKTREE_DIR}/*
 cp -r ${BUILD_DIR}/* ${WORKTREE_DIR}/
+echo "dextera.online" > ${WORKTREE_DIR}/CNAME
 
 # 6) Commit & push
 pushd ${WORKTREE_DIR} >/dev/null

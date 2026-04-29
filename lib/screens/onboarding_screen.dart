@@ -188,7 +188,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                                   );
                                                   if (!mounted) return;
                                                   // use pushReplacement if you don't want Onboarding kept in backstack
-                                                  Navigator.of(context).pushNamed('/login');
+                                                  Navigator.of(
+                                                    context,
+                                                  ).pushNamed('/login');
                                                 },
                                                 child: Container(
                                                   padding:
@@ -403,7 +405,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: const Color(0xFFDEDFE3),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(color: whiteClr),
             ),
             child: Row(

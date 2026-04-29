@@ -15,3 +15,8 @@ const String resendOtp = "${baseApiUrl}auth/resend-otp";
 const String convo = "${baseApiUrl}convo/all";
 const String convoCreate = "${baseApiUrl}convo/create";
 const String convoDelete = "${baseApiUrl}convo/delete";
+const String convoRename = "${baseApiUrl}convo/rename";
+
+// User profile update
+const String updateUsername = "${baseApiUrl}users/update/username";
+const String updatePassword = "${baseApiUrl}users/update/password";

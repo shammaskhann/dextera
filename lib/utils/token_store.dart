@@ -1,6 +1,6 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'dart:developer';
+import 'package:dextera/utils/shared_storage.dart';
 
 class TokenStore {
   static const _key = 'dextera_auth_token';
@@ -8,8 +8,7 @@ class TokenStore {
 
   static Future<void> init() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _token = prefs.getString(_key);
+      _token = await getTokenPlatform(_key);
       
       if (_token != null && _token!.isNotEmpty) {
         if (JwtDecoder.isExpired(_token!)) {
@@ -33,11 +32,10 @@ class TokenStore {
 
   static Future<void> _saveToken(String? value) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       if (value == null || value.isEmpty) {
-        await prefs.remove(_key);
+        await removeTokenPlatform(_key);
       } else {
-        await prefs.setString(_key, value);
+        await saveTokenPlatform(_key, value);
       }
     } catch(e) {
       log("Error saving token: $e");
@@ -47,8 +45,7 @@ class TokenStore {
   static Future<void> clear() async {
     _token = null;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_key);
+      await removeTokenPlatform(_key);
     } catch(e) {
       log("Error clearing token: $e");
     }

@@ -11,6 +11,8 @@ import 'package:dextera/screens/components/message_bubble.dart';
 import 'package:dextera/screens/login_screen.dart';
 import 'package:dextera/utils/html_escape.dart';
 import 'package:dextera/utils/token_store.dart';
+import 'package:dextera/utils/user_store.dart';
+import 'package:dextera/utils/snackbar_utils.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -44,6 +46,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   bool _isLoadingChat = false;
   String? _deletingConversationId;
   String? _loadingConversationId;
+  String? _renamingConversationId;
 
   // Document mode state – per-conversation context storage (Task 9)
   final Map<String, _DocumentContext> _conversationDocContexts = {};
@@ -111,10 +114,13 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   // ─────────────────────────────────────────────────────────────────────────
 
   void _showAlert(String message, {ChatAlertType type = ChatAlertType.error}) {
-    setState(() {
-      _alertMessage = message;
-      _alertType = type;
-    });
+    if (mounted) {
+      if (type == ChatAlertType.error) {
+        CustomSnackBar.showError(context, error: message);
+      } else {
+        CustomSnackBar.show(context, message: message, type: SnackBarType.info);
+      }
+    }
   }
 
   void _dismissAlert() {
@@ -370,6 +376,122 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     }
   }
 
+  Future<void> _renameConversation(
+    String conversationId,
+    String newTitle,
+  ) async {
+    if (newTitle.trim().isEmpty) return;
+    setState(() {
+      _renamingConversationId = conversationId;
+    });
+    try {
+      final updatedConvo = await _convoRepository.rename(
+        conversationId: conversationId,
+        title: newTitle,
+      );
+      if (!mounted) return;
+      setState(() {
+        _renamingConversationId = null;
+        final idx = _conversations.indexWhere((c) => c.id == conversationId);
+        if (idx != -1) {
+          _conversations[idx] = _conversations[idx].copyWith(
+            title: updatedConvo.title,
+          );
+        }
+      });
+      _showAlert('Conversation renamed successfully', type: ChatAlertType.info);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _renamingConversationId = null;
+      });
+      _showAlert('Failed to rename conversation: $e');
+    }
+  }
+
+  void _showDeleteConfirmationDialog(String conversationId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ThemeHelper.drawerClr,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Delete Chat?', style: TextStyle(color: whiteClr)),
+        content: Text(
+          'Are you sure you want to delete this conversation? This action cannot be undone.',
+          style: TextStyle(color: whiteClr.withOpacity(0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: whiteClr.withOpacity(0.5)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteConversation(conversationId);
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRenameDialog(String conversationId, String currentTitle) {
+    final controller = TextEditingController(text: currentTitle);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ThemeHelper.drawerClr,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Rename Chat', style: TextStyle(color: whiteClr)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: TextStyle(color: whiteClr),
+          decoration: InputDecoration(
+            hintText: 'Enter new title',
+            hintStyle: TextStyle(color: whiteClr.withOpacity(0.3)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: whiteClr.withOpacity(0.1)),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: ThemeHelper.lightBlueClr),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: whiteClr.withOpacity(0.5)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              final newTitle = controller.text.trim();
+              if (newTitle.isNotEmpty) {
+                Navigator.pop(context);
+                _renameConversation(conversationId, newTitle);
+              }
+            },
+            child: Text(
+              'Rename',
+              style: TextStyle(color: ThemeHelper.lightBlueClr),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _upsertConversationSummary(LocalConversation c) {
     final summary = ConversationSummary(
       id: c.id,
@@ -595,7 +717,6 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               ? null
               : AppBar(
                   elevation: 0,
-
                   backgroundColor: Colors.transparent,
                   foregroundColor: whiteClr,
                   leading: IconButton(
@@ -611,16 +732,16 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       }
                     },
                   ),
-                  actions: [
-                    IconButton(
-                      icon: Icon(
-                        isDark ? Icons.light_mode : Icons.dark_mode,
-                        color: whiteClr,
-                      ),
-                      onPressed: ThemeHelper.toggleTheme,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
+                  // actions: [
+                  //   IconButton(
+                  //     icon: Icon(
+                  //       isDark ? Icons.light_mode : Icons.dark_mode,
+                  //       color: whiteClr,
+                  //     ),
+                  //     onPressed: ThemeHelper.toggleTheme,
+                  //   ),
+                  //   const SizedBox(width: 8),
+                  // ],
                 ),
           body: Stack(
             children: [
@@ -726,9 +847,14 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                   ),
                 ),
               // Desktop top-left menu icon to toggle drawer open/closed
-              if (isDesktop)
+              if (isDesktop && !leftPanelVisible)
                 Positioned(
-                  top: 12,
+                  top:
+                      (_isDocumentMode &&
+                          _currentConversationId != null &&
+                          _messages.isNotEmpty)
+                      ? 45
+                      : 12,
                   left: 12,
                   child: SafeArea(
                     child: Material(
@@ -749,23 +875,23 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                   ),
                 ),
               // Desktop top-right theme toggle
-              if (isDesktop)
-                Positioned(
-                  top: 12,
-                  right: 24,
-                  child: SafeArea(
-                    child: Material(
-                      color: Colors.transparent,
-                      child: IconButton(
-                        icon: Icon(
-                          isDark ? Icons.light_mode : Icons.dark_mode,
-                          color: whiteClr,
-                        ),
-                        onPressed: ThemeHelper.toggleTheme,
-                      ),
-                    ),
-                  ),
-                ),
+              // if (isDesktop)
+              //   Positioned(
+              //     top: 12,
+              //     right: 24,
+              //     child: SafeArea(
+              //       child: Material(
+              //         color: Colors.transparent,
+              //         child: IconButton(
+              //           icon: Icon(
+              //             isDark ? Icons.light_mode : Icons.dark_mode,
+              //             color: whiteClr,
+              //           ),
+              //           onPressed: ThemeHelper.toggleTheme,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
             ],
           ),
         );
@@ -855,8 +981,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         children: [
           // Logo / round icon
           SvgPicture.asset(
-            'assets/icons/logo-D.svg',
-            color: whiteClr,
+            ThemeHelper.logoUrl,
+            // color: whiteClr,
             width: 86,
             height: 86,
           ),
@@ -1299,8 +1425,11 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  SvgPicture.asset("assets/icons/logo-full.svg"),
-
+                  SvgPicture.asset(
+                    ThemeHelper.isDarkMode
+                        ? "assets/icons/logo-full.svg"
+                        : "assets/icons/logo-full-light.svg",
+                  ),
                   GestureDetector(
                     onTap: _closeDrawer,
                     child: Container(
@@ -1455,32 +1584,115 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                                       color: whiteClr,
                                     ),
                                   )
-                                : _deletingConversationId == conv.id
-                                ? const SizedBox(
+                                : (_deletingConversationId == conv.id ||
+                                      _renamingConversationId == conv.id)
+                                ? SizedBox(
                                     width: 18,
                                     height: 18,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Colors.redAccent,
+                                      color: _deletingConversationId == conv.id
+                                          ? Colors.redAccent
+                                          : ThemeHelper.lightBlueClr,
                                     ),
                                   )
-                                : IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
+                                : PopupMenuButton<String>(
+                                    padding: EdgeInsets.zero,
+                                    icon: Icon(
+                                      Icons.more_vert,
                                       size: 18,
-                                      color: Colors.redAccent,
+                                      color: whiteClr.withOpacity(0.5),
                                     ),
-                                    onPressed: () =>
-                                        _deleteConversation(conv.id),
+                                    onSelected: (value) {
+                                      if (value == 'delete') {
+                                        _showDeleteConfirmationDialog(conv.id);
+                                      } else if (value == 'rename') {
+                                        _showRenameDialog(conv.id, conv.title);
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem(
+                                        value: 'rename',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.edit_outlined,
+                                              size: 18,
+                                              color: whiteClr,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              'Rename',
+                                              style: TextStyle(color: whiteClr),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.delete_outline,
+                                              size: 18,
+                                              color: Colors.redAccent,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            const Text(
+                                              'Delete',
+                                              style: TextStyle(
+                                                color: Colors.redAccent,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                    color: ThemeHelper.drawerClr,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
                           ),
                         );
                       },
                     ),
             ),
+            // User Profile Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushNamed('/user-info');
+                },
+                icon: const Icon(
+                  Icons.person_outline,
+                  color: Color(0xFF9FAFD2),
+                ),
+                label: const Text(
+                  'Profile Settings',
+                  style: TextStyle(
+                    color: Color(0xFF9FAFD2),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
+                  backgroundColor: ThemeHelper.buttonBgClr.withOpacity(0.5),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
             //Logout
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: ElevatedButton.icon(
                 onPressed: () {
                   TokenStore.clear();
@@ -1491,23 +1703,33 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     ),
                   );
                 },
-                icon: const Icon(Icons.logout, color: Colors.redAccent),
+                icon: const Icon(
+                  Icons.logout_rounded,
+                  color: Colors.redAccent,
+                  size: 20,
+                ),
                 label: const Text(
                   'Logout',
-                  style: TextStyle(color: Colors.redAccent),
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
+                  alignment: Alignment.centerLeft,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 24,
+                    horizontal: 16,
+                    vertical: 20,
                   ),
-                  backgroundColor: ThemeHelper.buttonBgClr,
+                  backgroundColor: ThemeHelper.buttonBgClr.withOpacity(0.5),
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
             ),
+            const SizedBox(height: 12),
           ],
         ),
       ),

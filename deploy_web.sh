@@ -10,10 +10,11 @@ echo "====================================================="
 # Build the web app with the base-href set to the repository name
 echo "Building Flutter Web release..."
 # IMPORTANT: The base-href must match the repository name for GitHub Pages
-flutter build web --release --base-href "/dextera/"
+flutter build web --release --base-href "/"
 
 echo "Navigating to build/web directory..."
 cd build/web || exit
+echo "dextera.online" > CNAME
 
 echo "Initializing a temporary git repo..."
 git init
@@ -37,6 +38,6 @@ echo "1. Go to your repository settings on GitHub: https://github.com/shammaskha
 echo "2. Set the 'Source' under 'Build and deployment' to 'Deploy from a branch'"
 echo "3. Select the 'gh-pages' branch and '/ (root)' folder"
 echo "4. Save."
-echo "Your app will be live at: https://shammaskhann.github.io/dextera/"
+echo "Your app will be live at: https://dextera.online"
 echo "Note: It may take a few minutes for GitHub Pages to update."
 echo "====================================================="

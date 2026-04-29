@@ -99,14 +99,30 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: largeSpacing),
 
                     // --- Text fields ---
-                    CustomTextField(
-                      hint: "Email Address",
-                      controller: emailController,
-                    ),
-                    CustomTextField(
-                      hint: "Password",
-                      controller: passwordController,
-                      obscureText: true,
+                    ListenableBuilder(
+                      listenable: _controller,
+                      builder: (context, _) {
+                        return Column(
+                          children: [
+                            CustomTextField(
+                              hint: "Enter your email address",
+                              label: "Email Address",
+                              controller: emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              errorText: _controller.emailError,
+                              onChanged: (val) => _controller.validateEmail(val),
+                            ),
+                            CustomTextField(
+                              hint: "Enter your password",
+                              label: "Password",
+                              controller: passwordController,
+                              obscureText: true,
+                              errorText: _controller.passwordError,
+                              onChanged: (val) => _controller.validatePassword(val),
+                            ),
+                          ],
+                        );
+                      },
                     ),
 
                     SizedBox(height: buttonSpacing),
