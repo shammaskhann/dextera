@@ -55,10 +55,7 @@ List<Widget> formatMarkdownToWidgets(String text) {
           padding: const EdgeInsets.only(bottom: 6),
           decoration: BoxDecoration(
             border: Border(
-              bottom: BorderSide(
-                color: whiteClr.withOpacity(0.12),
-                width: 1,
-              ),
+              bottom: BorderSide(color: whiteClr.withOpacity(0.12), width: 1),
             ),
           ),
           child: Text(
@@ -66,7 +63,7 @@ List<Widget> formatMarkdownToWidgets(String text) {
             style: TextStyle(
               color: whiteClr,
               fontWeight: FontWeight.w700,
-              fontSize: 15,
+              fontSize: 16,
               height: 1.4,
             ),
           ),
@@ -87,7 +84,6 @@ List<Widget> formatMarkdownToWidgets(String text) {
     // ── Bullet list item:  * item  or  - item ──
     final bulletMatch = RegExp(r'^[\*\-]\s+(.+)$').firstMatch(line);
     if (bulletMatch != null) {
-
       final itemText = bulletMatch.group(1)!;
       currentListItems.add(
         Padding(
@@ -133,7 +129,7 @@ List<Widget> formatMarkdownToWidgets(String text) {
                   style: TextStyle(
                     color: whiteClr.withOpacity(0.70),
                     fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                    fontSize: 15,
                     height: 1.6,
                   ),
                 ),
@@ -181,10 +177,7 @@ List<Widget> formatMarkdownToWidgets(String text) {
 /// Builds a [RichText] widget with inline **bold** and *italic* formatting.
 Widget _buildInlineFormattedText(String text) {
   final spans = _parseInlineMarkdown(text);
-  return RichText(
-    softWrap: true,
-    text: TextSpan(children: spans),
-  );
+  return RichText(softWrap: true, text: TextSpan(children: spans));
 }
 
 /// Parses inline markdown and returns a flat list of [TextSpan]s.
@@ -226,32 +219,32 @@ List<TextSpan> _parseInlineMarkdown(String text) {
 }
 
 TextSpan _normalSpan(String text) => TextSpan(
-      text: text,
-      style: TextStyle(
-        color: whiteClr.withOpacity(0.78),
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        height: 1.6,
-      ),
-    );
+  text: text,
+  style: TextStyle(
+    color: whiteClr.withOpacity(0.78),
+    fontSize: 15,
+    fontWeight: FontWeight.w500,
+    height: 1.6,
+  ),
+);
 
 TextSpan _boldSpan(String text) => TextSpan(
-      text: text,
-      style: TextStyle(
-        color: whiteClr.withOpacity(0.92),
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        height: 1.6,
-      ),
-    );
+  text: text,
+  style: TextStyle(
+    color: whiteClr.withOpacity(0.92),
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    height: 1.6,
+  ),
+);
 
 TextSpan _italicSpan(String text) => TextSpan(
-      text: text,
-      style: TextStyle(
-        color: whiteClr.withOpacity(0.68),
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        fontStyle: FontStyle.italic,
-        height: 1.6,
-      ),
-    );
+  text: text,
+  style: TextStyle(
+    color: whiteClr.withOpacity(0.68),
+    fontSize: 15,
+    fontWeight: FontWeight.w500,
+    fontStyle: FontStyle.italic,
+    height: 1.6,
+  ),
+);

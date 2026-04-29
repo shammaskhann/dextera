@@ -188,6 +188,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         )
         .listen(
           (chunk) {
+            log('Received chunk: $chunk');
             setState(() {
               // Content accumulation: add space before chunk if needed
               final current = _messages[assistantIndex].text;

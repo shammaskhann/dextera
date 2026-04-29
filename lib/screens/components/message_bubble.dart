@@ -61,7 +61,7 @@ class _UserMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final maxW = screenWidth < 700 ? screenWidth * 0.85 : screenWidth * 0.78;
+    final maxW = screenWidth < 700 ? screenWidth * 0.85 : screenWidth * 0.65;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
@@ -98,7 +98,7 @@ class _UserMessageBubble extends StatelessWidget {
                 message.text,
                 style: TextStyle(
                   color: whiteClr,
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w500,
                   height: 1.5,
                 ),
