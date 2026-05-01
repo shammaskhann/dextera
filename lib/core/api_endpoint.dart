@@ -10,6 +10,8 @@ const String googleLogin = "${baseApiUrl}auth/google";
 const String register = "${baseApiUrl}auth/register";
 const String verifyOtp = "${baseApiUrl}auth/verify-otp";
 const String resendOtp = "${baseApiUrl}auth/resend-otp";
+const String forgotPassword = "${baseApiUrl}auth/forgot-password";
+const String resetPassword = "${baseApiUrl}auth/reset-password";
 
 // Conversations (local springboot)
 const String convo = "${baseApiUrl}convo/all";

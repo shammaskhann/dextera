@@ -172,6 +172,19 @@ class LoginController extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
+      if (response.user?.verified == false) {
+        _errorMessage = 'Please verify your email before logging in';
+        notifyListeners();
+        if (context.mounted) {
+          CustomSnackBar.show(
+            context,
+            type: SnackBarType.info,
+            message: 'Please verify your email before logging in',
+          );
+        }
+        Navigator.of(context).pushNamed('/otp', arguments: email);
+        //return;
+      }
 
       if (response.status && response.token.isNotEmpty) {
         TokenStore.token = response.token;

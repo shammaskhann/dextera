@@ -110,7 +110,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: emailController,
                               keyboardType: TextInputType.emailAddress,
                               errorText: _controller.emailError,
-                              onChanged: (val) => _controller.validateEmail(val),
+                              onChanged: (val) =>
+                                  _controller.validateEmail(val),
                             ),
                             CustomTextField(
                               hint: "Enter your password",
@@ -118,7 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: passwordController,
                               obscureText: true,
                               errorText: _controller.passwordError,
-                              onChanged: (val) => _controller.validatePassword(val),
+                              onChanged: (val) =>
+                                  _controller.validatePassword(val),
                             ),
                           ],
                         );
@@ -144,6 +146,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           isLoading: _controller.isLoading,
                         );
                       },
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    // --- Forgot Password Link ---
+                    GestureDetector(
+                      onTap: () =>
+                          Navigator.of(context).pushNamed('/forgot-password'),
+                      child: Text(
+                        "Forgot your password?",
+                        style: TextStyle(
+                          color: lightBlueClr,
+                          fontSize: subtitleFontSize,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
 
                     const SizedBox(height: 15),

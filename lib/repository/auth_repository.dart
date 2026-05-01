@@ -237,4 +237,106 @@ class AuthRepository {
       );
     }
   }
+
+  Future<ApiResponse> forgotPassword(ForgotPasswordRequest request) async {
+    try {
+      final body = jsonEncode(request.toJson());
+      if (body.isEmpty || body == 'null') {
+        throw Exception('Invalid request body');
+      }
+
+      final response = await http.post(
+        Uri.parse(api.forgotPassword),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      if (response.body.isEmpty) {
+        log('Error: Empty response body from server');
+        throw Exception('Server returned empty response');
+      }
+
+      final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
+      log(
+        'Response body: ${response.body}',
+        name: 'Response body FORGOT PASSWORD',
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse.fromJson(jsonResponse);
+      } else {
+        return ApiResponse(
+          status: jsonResponse['status'] ?? false,
+          message: jsonResponse['message'] ?? 'Failed to send OTP',
+        );
+      }
+    } on FormatException catch (e) {
+      log('JSON parse error: $e');
+      return ApiResponse(
+        status: false,
+        message: 'Invalid server response format',
+      );
+    } catch (e) {
+      if (e.toString().contains('Cannot send Null')) {
+        return ApiResponse(
+          status: false,
+          message: 'Network error: Invalid request',
+        );
+      }
+      return ApiResponse(
+        status: false,
+        message: 'Network error: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<ApiResponse> resetPassword(ResetPasswordRequest request) async {
+    try {
+      final body = jsonEncode(request.toJson());
+      if (body.isEmpty || body == 'null') {
+        throw Exception('Invalid request body');
+      }
+
+      final response = await http.post(
+        Uri.parse(api.resetPassword),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      if (response.body.isEmpty) {
+        log('Error: Empty response body from server');
+        throw Exception('Server returned empty response');
+      }
+
+      final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
+      log(
+        'Response body: ${response.body}',
+        name: 'Response body RESET PASSWORD',
+      );
+      if (response.statusCode == 200) {
+        return ApiResponse.fromJson(jsonResponse);
+      } else {
+        return ApiResponse(
+          status: jsonResponse['status'] ?? false,
+          message: jsonResponse['message'] ?? 'Failed to reset password',
+        );
+      }
+    } on FormatException catch (e) {
+      log('JSON parse error: $e');
+      return ApiResponse(
+        status: false,
+        message: 'Invalid server response format',
+      );
+    } catch (e) {
+      if (e.toString().contains('Cannot send Null')) {
+        return ApiResponse(
+          status: false,
+          message: 'Network error: Invalid request',
+        );
+      }
+      return ApiResponse(
+        status: false,
+        message: 'Network error: ${e.toString()}',
+      );
+    }
+  }
 }

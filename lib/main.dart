@@ -1,6 +1,7 @@
 import 'package:dextera/core/app_theme.dart';
 import 'package:dextera/screens/signup_screen.dart';
 import 'package:dextera/screens/user_info_screen.dart';
+import 'package:dextera/screens/forgot_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -77,6 +78,9 @@ class MyApp extends StatelessWidget {
                 break;
               case '/user-info':
                 page = const UserInfoScreen();
+                break;
+              case '/forgot-password':
+                page = const ForgotPasswordScreen();
                 break;
               case '/otp':
                 final email = settings.arguments as String?;
