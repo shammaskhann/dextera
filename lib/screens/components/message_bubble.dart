@@ -183,7 +183,9 @@ class _AssistantMessageBubble extends StatelessWidget {
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: formatMarkdownToWidgets(mainContent),
+                      children: content.isEmpty
+                          ? [const TypingIndicator()]
+                          : formatMarkdownToWidgets(mainContent),
                     ),
                   ),
 
@@ -541,8 +543,8 @@ class _TypingIndicatorState extends State<TypingIndicator>
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              color: ThemeHelper.buttonTextClr,
+            decoration: const BoxDecoration(
+              color: Colors.transparent,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(18),
                 topRight: Radius.circular(18),

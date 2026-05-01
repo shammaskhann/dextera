@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:dextera/core/app_theme.dart';
 import 'package:dextera/screens/components/animated_component.dart';
+import 'package:dextera/screens/components/gradient_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -93,16 +94,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                           },
                                           child: Align(
                                             alignment: Alignment.topCenter,
-                                            child: Text(
-                                              'extera',
-                                              style: TextStyle(
-                                                color: whiteClr,
-                                                fontSize: dSize * 0.39,
-                                                fontFamily: 'Manrope',
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: 1.5,
-                                              ),
-                                            ),
+                                            child: ThemeHelper.isDarkMode
+                                                ? Text(
+                                                    'extera',
+                                                    style: TextStyle(
+                                                      color:
+                                                          ThemeHelper.whiteClr,
+                                                      fontSize: dSize * 0.39,
+                                                      fontFamily: 'Manrope',
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      letterSpacing: 1.5,
+                                                    ),
+                                                  )
+                                                : GradientText(
+                                                    'extera',
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        ThemeHelper
+                                                            .textPrimaryClr,
+                                                        ThemeHelper
+                                                            .textSecondaryClr,
+                                                      ],
+                                                    ),
+                                                    style: TextStyle(
+                                                      fontSize: dSize * 0.39,
+                                                      fontFamily: 'Manrope',
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      letterSpacing: 1.5,
+                                                    ),
+                                                  ),
                                           ),
                                         ),
 
@@ -145,9 +167,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                       );
                                     },
                                     child: Text(
-                                      'AI powered Legal Assistant',
+                                      'AI Powered Criminal Law Assistant',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.9),
+                                        color: ThemeHelper.whiteClr,
                                         fontSize: dSize * 0.08,
                                         fontFamily: 'Manrope',
                                         fontWeight: FontWeight.w500,
@@ -283,21 +305,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              'Dextera',
-              style: TextStyle(
-                color: whiteClr,
-                fontSize: 32,
-                fontFamily: 'Manrope',
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              ),
-            ),
+            ThemeHelper.isDarkMode
+                ? Text(
+                    'Dextera',
+                    style: TextStyle(
+                      color: ThemeHelper.whiteClr,
+                      fontSize: 32,
+                      fontFamily: 'Manrope',
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  )
+                : GradientText(
+                    'Dextera',
+                    gradient: LinearGradient(
+                      colors: [
+                        ThemeHelper.textPrimaryClr,
+                        ThemeHelper.textSecondaryClr,
+                      ],
+                    ),
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontFamily: 'Manrope',
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
             const SizedBox(height: 8),
             Text(
-              'AI powered Legal Assistant',
+              'AI Powered Criminal Law Assistant',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: ThemeHelper.whiteClr,
                 fontSize: 16,
                 fontFamily: 'Manrope',
                 fontWeight: FontWeight.w500,

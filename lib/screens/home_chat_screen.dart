@@ -8,6 +8,7 @@ import 'package:dextera/models/local_conversation.dart';
 import 'package:dextera/repository/chat_repository.dart';
 import 'package:dextera/repository/convo_repository.dart';
 import 'package:dextera/screens/components/message_bubble.dart';
+import 'package:dextera/screens/components/gradient_text.dart';
 import 'package:dextera/screens/login_screen.dart';
 import 'package:dextera/utils/html_escape.dart';
 import 'package:dextera/utils/token_store.dart';
@@ -215,6 +216,12 @@ class _HomeChatScreenState extends State<HomeChatScreen>
           onError: (err) {
             setState(() {
               _isStreaming = false;
+              // If the stream failed before any chunks were received, remove the placeholder
+              if (_messages.isNotEmpty &&
+                  !_messages.last.isUser &&
+                  _messages.last.text.isEmpty) {
+                _messages.removeLast();
+              }
             });
             if (!mounted) return;
 
@@ -746,70 +753,25 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                 ),
           body: Stack(
             children: [
-              Row(
-                children: [
-                  // ===========================
-                  // LEFT PERSISTENT DRAWER (desktop)
-                  // ===========================
-                  if (isDesktop && leftPanelVisible)
-                    SizedBox(width: 320, child: _buildDrawerColumn()),
-
-                  // ===========================
-                  // MAIN CONTENT AREA
-                  // ===========================
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // Document mode banner (Task 9)
-                        if (_isDocumentMode &&
-                            _currentConversationId != null &&
-                            _messages.isNotEmpty)
-                          _buildDocumentModeBanner(),
-
-                        // Alert display (Task 10)
-                        if (_alertMessage != null)
-                          ChatAlert(
-                            message: _alertMessage!,
-                            type: _alertType,
-                            onDismiss: _dismissAlert,
-                          ),
-
-                        // Main content
-                        Expanded(
-                          child: _isLoadingChat
-                              ? const Center(
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : (_isSummarizing ||
-                                    _pendingDocumentSummary != null)
-                              ? _buildSummaryState(
-                                  isMobile,
-                                  isTablet,
-                                  isDesktop,
-                                )
-                              : _messages.isEmpty
-                              ? _buildInitialCenteredState(
-                                  isMobile,
-                                  isTablet,
-                                  isDesktop,
-                                )
-                              : _buildActiveChatState(
-                                  isMobile,
-                                  isTablet,
-                                  isDesktop,
-                                ),
-                        ),
-                      ],
+              // 1. Content Area (Desktop Row or Mobile/Tablet Single Column)
+              if (isDesktop)
+                Row(
+                  children: [
+                    if (leftPanelVisible)
+                      SizedBox(width: 320, child: _buildDrawerColumn()),
+                    Expanded(
+                      child: _buildMainContentColumn(
+                        isMobile,
+                        isTablet,
+                        isDesktop,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                )
+              else
+                _buildMainContentColumn(isMobile, isTablet, isDesktop),
 
-              // ===========================
-              // OVERLAY SLIDE-IN DRAWER (mobile/tablet T2)
-              // ===========================
+              // 2. OVERLAY SLIDE-IN DRAWER (mobile/tablet T2)
               if (!isDesktop && leftPanelVisible)
                 Positioned.fill(
                   child: GestureDetector(
@@ -847,7 +809,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     ),
                   ),
                 ),
-              // Desktop top-left menu icon to toggle drawer open/closed
+
+              // 3. Desktop toggle button
               if (isDesktop && !leftPanelVisible)
                 Positioned(
                   top:
@@ -862,7 +825,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       color: Colors.transparent,
                       child: IconButton(
                         icon: _drawerOpen
-                            ? SizedBox.shrink()
+                            ? const SizedBox.shrink()
                             : SvgPicture.asset('assets/icons/drawer.svg'),
                         onPressed: () {
                           if (_drawerOpen) {
@@ -875,28 +838,47 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     ),
                   ),
                 ),
-              // Desktop top-right theme toggle
-              // if (isDesktop)
-              //   Positioned(
-              //     top: 12,
-              //     right: 24,
-              //     child: SafeArea(
-              //       child: Material(
-              //         color: Colors.transparent,
-              //         child: IconButton(
-              //           icon: Icon(
-              //             isDark ? Icons.light_mode : Icons.dark_mode,
-              //             color: whiteClr,
-              //           ),
-              //           onPressed: ThemeHelper.toggleTheme,
-              //         ),
-              //       ),
-              //     ),
-              //   ),
             ],
           ),
         );
       },
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // UI Helpers (Consolidated)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildMainContentColumn(bool isMobile, bool isTablet, bool isDesktop) {
+    return Column(
+      children: [
+        // Document mode banner (Task 9)
+        if (_isDocumentMode &&
+            _currentConversationId != null &&
+            _messages.isNotEmpty)
+          _buildDocumentModeBanner(),
+
+        // Alert display (Task 10)
+        if (_alertMessage != null)
+          ChatAlert(
+            message: _alertMessage!,
+            type: _alertType,
+            onDismiss: _dismissAlert,
+          ),
+
+        // Main content area
+        Expanded(
+          child: _isLoadingChat
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+              : (_isSummarizing || _pendingDocumentSummary != null)
+              ? _buildSummaryState(isMobile, isTablet, isDesktop)
+              : _messages.isEmpty
+              ? _buildInitialCenteredState(isMobile, isTablet, isDesktop)
+              : _buildActiveChatState(isMobile, isTablet, isDesktop),
+        ),
+      ],
     );
   }
 
@@ -970,128 +952,158 @@ class _HomeChatScreenState extends State<HomeChatScreen>
     bool isTablet,
     bool isDesktop,
   ) {
+    final screenWidth = MediaQuery.of(context).size.width;
     final width = isMobile
-        ? double.infinity
+        ? screenWidth
         : isTablet
         ? 760.0
         : 900.0; // natural max width for center box
 
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Logo / round icon
-          SvgPicture.asset(
-            ThemeHelper.logoUrl,
-            // color: whiteClr,
-            width: 86,
-            height: 86,
-          ),
-          const SizedBox(height: 26),
-          Text(
-            'How can I assist you?',
-            style: TextStyle(
-              color: whiteClr,
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 22),
-          Container(
-            height: width * 0.14,
-            width: width,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            decoration: BoxDecoration(
-              color: drawerClr,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 36,
-                  offset: const Offset(0, 18),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _inputController,
-                    style: TextStyle(color: whiteClr),
-                    minLines: 1,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: _isDocumentMode
-                          ? "Ask about '${_conversationDocContexts[_currentConversationId]?.filename ?? "document"}'..."
-                          : 'Write your legal query here',
-                      hintStyle: TextStyle(color: whiteClr.withOpacity(0.54)),
-                      border: InputBorder.none,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Logo / round icon
+                    SvgPicture.asset(
+                      ThemeHelper.logoUrl,
+                      width: isMobile ? 70 : 86,
+                      height: isMobile ? 70 : 86,
                     ),
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                _roundIconButton(Icons.send, _sendMessage),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                height: 1,
-                width: 60,
-                color: whiteClr.withOpacity(0.24),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'OR',
-                  style: TextStyle(
-                    color: whiteClr.withOpacity(0.54),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Container(
-                height: 1,
-                width: 60,
-                color: whiteClr.withOpacity(0.24),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          InkWell(
-            onTap: _uploadPdf,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: drawerClr,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF455168), width: 1.5),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.post_add, color: whiteClr),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Summarize a Document',
-                    style: TextStyle(
-                      color: whiteClr,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(height: 26),
+                    GradientText(
+                      'How can I assist you?',
+                      gradient: LinearGradient(
+                        colors: [
+                          ThemeHelper.textPrimaryClr,
+                          ThemeHelper.textSecondaryClr,
+                        ],
+                      ),
+                      style: TextStyle(
+                        fontSize: isMobile ? 20 : 22,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 22),
+                    Container(
+                      height: isMobile ? 72 : width * 0.14,
+                      width: width,
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: drawerClr,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 36,
+                            offset: const Offset(0, 18),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _inputController,
+                              style: TextStyle(color: whiteClr),
+                              minLines: 1,
+                              maxLines: 4,
+                              decoration: InputDecoration(
+                                hintText: _isDocumentMode
+                                    ? "Ask about '${_conversationDocContexts[_currentConversationId]?.filename ?? "document"}'..."
+                                    : 'Write your legal query here',
+                                hintStyle: TextStyle(
+                                  color: whiteClr.withOpacity(0.54),
+                                ),
+                                border: InputBorder.none,
+                              ),
+                              onSubmitted: (_) => _sendMessage(),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          _roundIconButton(Icons.send, _sendMessage),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          height: 1,
+                          width: 60,
+                          color: whiteClr.withOpacity(0.24),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(
+                              color: whiteClr.withOpacity(0.54),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          height: 1,
+                          width: 60,
+                          color: whiteClr.withOpacity(0.24),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    InkWell(
+                      onTap: _uploadPdf,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: drawerClr,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF455168),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.post_add, color: whiteClr),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Summarize a Document',
+                              style: TextStyle(
+                                color: whiteClr,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1666,14 +1678,11 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                 onPressed: () {
                   Navigator.of(context).pushNamed('/user-info');
                 },
-                icon: const Icon(
-                  Icons.person_outline,
-                  color: Color(0xFF9FAFD2),
-                ),
-                label: const Text(
+                icon: Icon(Icons.person_outline, color: Colors.white),
+                label: Text(
                   'Profile Settings',
                   style: TextStyle(
-                    color: Color(0xFF9FAFD2),
+                    color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1683,7 +1692,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     horizontal: 16,
                     vertical: 20,
                   ),
-                  backgroundColor: ThemeHelper.buttonBgClr.withOpacity(0.5),
+                  backgroundColor: ThemeHelper.lightBlueClr,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1722,7 +1731,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     horizontal: 16,
                     vertical: 20,
                   ),
-                  backgroundColor: ThemeHelper.buttonBgClr.withOpacity(0.5),
+                  backgroundColor: ThemeHelper.lightBlueClr,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

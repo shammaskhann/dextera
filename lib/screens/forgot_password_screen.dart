@@ -405,7 +405,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SizedBox(height: 6),
           Container(
             decoration: BoxDecoration(
-              color: lightPinkClr.withOpacity(0.12),
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: errorText != null
@@ -440,7 +440,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     padding: const EdgeInsets.only(right: 12),
                     child: Icon(
                       showPassword ? Icons.visibility : Icons.visibility_off,
-                      color: Colors.white.withOpacity(0.6),
+                      color: whiteClr,
                       size: 20,
                     ),
                   ),

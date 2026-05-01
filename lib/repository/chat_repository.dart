@@ -53,11 +53,11 @@ class ChatRepository {
         ..body = bodyString;
 
       final response = await request.send().timeout(
-            const Duration(seconds: 30),
-            onTimeout: () {
-              throw TimeoutException('Connection timed out');
-            },
-          );
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('Connection timed out');
+        },
+      );
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
@@ -78,16 +78,17 @@ class ChatRepository {
 
       // Parse line-by-line SSE chunks with timeout.
       // Buffer approach: accumulate lines delimited by \n\n frames.
-      await for (final line in response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .timeout(
-        _streamTimeout,
-        onTimeout: (sink) {
-          log('SSE stream timed out after $_streamTimeout');
-          sink.close();
-        },
-      )) {
+      await for (final line
+          in response.stream
+              .transform(utf8.decoder)
+              .transform(const LineSplitter())
+              .timeout(
+                _streamTimeout,
+                onTimeout: (sink) {
+                  log('SSE stream timed out after $_streamTimeout');
+                  sink.close();
+                },
+              )) {
         String? token;
 
         if (line.startsWith('data: ')) {
@@ -187,7 +188,7 @@ class ChatRepository {
     PlatformFile file,
   ) async {
     final uri = Uri.parse(
-      '$_baseUrl/api/v1/summarize?conversation_id=$conversationId',
+      '$_baseUrl/api/v2/summarize?conversation_id=$conversationId',
     );
     final request = http.MultipartRequest('POST', uri);
 
@@ -213,14 +214,15 @@ class ChatRepository {
         throw Exception('File bytes and readStream are null on Web');
       }
     } else {
-      if (file.path == null)
+      if (file.path == null) {
         throw Exception('File path is null on non-Web platform');
+      }
       request.files.add(await http.MultipartFile.fromPath('file', file.path!));
     }
 
     final response = await request.send();
     final responseBody = await response.stream.bytesToString();
-
+    log("responseBody: $responseBody , statsuCode: ${response.statusCode}");
     if (response.statusCode == 200) {
       final jsonMap = jsonDecode(responseBody) as Map<String, dynamic>;
       return jsonMap;

@@ -301,7 +301,14 @@ class AuthRepository {
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
-
+      log(
+        'Response status: ${response.statusCode}',
+        name: 'Response status RESET PASSWORD',
+      );
+      log(
+        'Response body: ${response.body}',
+        name: 'Response body RESET PASSWORD',
+      );
       if (response.body.isEmpty) {
         log('Error: Empty response body from server');
         throw Exception('Server returned empty response');

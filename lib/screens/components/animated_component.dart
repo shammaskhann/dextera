@@ -62,11 +62,12 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
                 height: 700,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  backgroundBlendMode: BlendMode.screen,
+                  // backgroundBlendMode: BlendMode.screen,
                   gradient: RadialGradient(
                     colors: [
                       lightPinkClr.withAlpha((0.28 * 255).round()),
                       lightPinkClr.withAlpha((0.05 * 255).round()),
+
                       //Colors.transparent,
                     ],
                   ),

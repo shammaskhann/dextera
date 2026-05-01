@@ -46,11 +46,12 @@ class ThemeHelper {
   static Color get iconBoxClr =>
       isDarkMode ? _darkIconBoxClr : const Color.fromARGB(255, 202, 216, 252);
   static Color get lightPinkClr =>
-      isDarkMode ? _darkLightPinkClr : _lightLightPinkClr;
+      isDarkMode ? _darkLightPinkClr : const Color.fromARGB(255, 88, 103, 189);
   static Color get lightBlueClr =>
-      isDarkMode ? _darkLightBlueClr : _lightLightBlueClr;
-  static Color get lightGreenClr =>
-      isDarkMode ? _darkLightGreenClr : _lightLightGreenClr;
+      isDarkMode ? _darkLightBlueClr : const Color.fromARGB(255, 77, 90, 118);
+  static Color get lightGreenClr => isDarkMode
+      ? _darkLightGreenClr
+      : const Color.fromARGB(255, 104, 175, 193);
   static Color get whiteClr => isDarkMode ? _darkWhiteClr : _lightWhiteClr;
 
   static Color get buttonTextClr => isDarkMode ? _darkWhiteClr : _lightWhiteClr;
@@ -76,6 +77,9 @@ class ThemeHelper {
   static Color get infoColor => _lightLightBlueClr;
 
   static Color get tertiaryColor => _lightLightBlueClr;
+
+  static Color get textPrimaryClr => const Color(0xFF7780a9);
+  static Color get textSecondaryClr => const Color.fromARGB(255, 169, 180, 221);
 }
 
 // Global getters for backward compatibility throughout the project

@@ -60,7 +60,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           ],
           Container(
             decoration: BoxDecoration(
-              color: lightPinkClr.withOpacity(0.12),
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: widget.errorText != null
@@ -79,7 +79,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                     style: TextStyle(color: whiteClr, fontSize: 14),
                     decoration: InputDecoration(
                       hintText: widget.hint,
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+                      hintStyle: TextStyle(color: whiteClr),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                         vertical: 14,
@@ -100,7 +100,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                         isPasswordField
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: Colors.white.withOpacity(0.4),
+                        color: whiteClr,
                         size: 20,
                       ),
                     ),
