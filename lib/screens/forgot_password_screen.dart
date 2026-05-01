@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:dextera/screens/components/custom_button.dart';
 import 'package:dextera/screens/components/custom_textfield.dart';
 import 'package:flutter/material.dart';
@@ -27,16 +29,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void _onControllerStateChanged() {
     if (_controller.successMessage != null && mounted) {
+      log('Success: ${_controller.successMessage}');
       CustomSnackBar.showSuccess(context, message: _controller.successMessage!);
       _controller.clearSuccessMessage();
     }
     if (_controller.errorMessage != null && mounted) {
+      log('Error: ${_controller.errorMessage}');
       CustomSnackBar.showError(context, error: _controller.errorMessage!);
+      _controller.clearErrors();
+      setState(() {});
     }
   }
 
-  void _handleSendOtp() {
-    _controller.sendOtp(emailController.text.trim(), context);
+  Future<void> _handleSendOtp() async {
+    await _controller.sendOtp(emailController.text.trim(), context);
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _handleResendOtp() {
