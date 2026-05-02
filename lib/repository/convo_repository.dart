@@ -12,7 +12,7 @@ class ConvoRepository {
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'ngrok-skip-browser-warning': 'true',
+      //  'ngrok-skip-browser-warning': 'true',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
@@ -148,7 +148,10 @@ class ConvoRepository {
     required String title,
   }) async {
     try {
-      final body = jsonEncode({'conversationId': conversationId, 'title': title});
+      final body = jsonEncode({
+        'conversationId': conversationId,
+        'title': title,
+      });
       final headers = _headers();
 
       log('Renaming conversation at: ${api.convoRename}');

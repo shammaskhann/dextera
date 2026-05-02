@@ -37,7 +37,7 @@ class ThemeHelper {
 
   // Getters for specific colors depending on the active theme mode
   static Color get backgroundClr =>
-      isDarkMode ? _darkBackgroundClr : _lightBackgroundClr;
+      isDarkMode ? _darkBackgroundClr : Color(0xFFFFFFFF);
   static Color get primaryClr =>
       isDarkMode ? _darkPrimaryClr : _lightPrimaryClr;
   static Color get drawerClr => isDarkMode ? _darkDrawerClr : _lightDrawerClr;
@@ -48,7 +48,8 @@ class ThemeHelper {
   static Color get lightPinkClr =>
       isDarkMode ? _darkLightPinkClr : const Color.fromARGB(255, 88, 103, 189);
   static Color get lightBlueClr =>
-      isDarkMode ? _darkLightBlueClr : const Color.fromARGB(255, 77, 90, 118);
+      !isDarkMode ? _darkLightBlueClr : const Color.fromARGB(255, 77, 90, 118);
+
   static Color get lightGreenClr => isDarkMode
       ? _darkLightGreenClr
       : const Color.fromARGB(255, 104, 175, 193);
@@ -80,6 +81,12 @@ class ThemeHelper {
 
   static Color get textPrimaryClr => const Color(0xFF7780a9);
   static Color get textSecondaryClr => const Color.fromARGB(255, 169, 180, 221);
+
+  static Color get yellowClr =>
+      isDarkMode ? const Color(0xFF6c7ba6) : const Color(0xFF96ace4);
+
+  static Color get messageBgClr =>
+      isDarkMode ? const Color(0xFF454d66) : const Color(0xFFeaf0ff);
 }
 
 // Global getters for backward compatibility throughout the project

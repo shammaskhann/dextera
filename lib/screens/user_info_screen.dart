@@ -1,6 +1,8 @@
 import 'dart:developer';
 
+import 'package:dextera/screens/login_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:dextera/core/app_theme.dart';
 import 'package:dextera/controllers/user_info_controller.dart';
@@ -123,6 +125,78 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     }
   }
 
+  Future<void> _deleteAccount(UserInfoController controller) async {
+    final success = await controller.deleteAccount();
+    if (mounted) {
+      if (success) {
+        CustomSnackBar.show(
+          context,
+          message: 'Account deleted successfully',
+          type: SnackBarType.success,
+        );
+        // Navigate to login screen after snackbar is dismissed
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            Get.offAllNamed('/login');
+          }
+        });
+      } else {
+        CustomSnackBar.showError(
+          context,
+          error: controller.errorMessage.value ?? 'Failed to delete account',
+        );
+      }
+    }
+  }
+
+  void _showDeleteConfirmation() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: ThemeHelper.primaryClr,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Delete Account?',
+            style: TextStyle(
+              color: ThemeHelper.whiteClr,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'This will permanently delete your account and all associated data. This action cannot be undone.',
+            style: TextStyle(
+              color: ThemeHelper.whiteClr.withOpacity(0.8),
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: ThemeHelper.lightBlueClr),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteAccount(controller);
+              },
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Color(0xFFEF4444)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
@@ -143,185 +217,231 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                 letterSpacing: 0.5,
               ),
             ),
-            leading: SizedBox.shrink(),
+            leading: IconButton(
+              icon: SvgPicture.asset(
+                "assets/icons/drawer.svg",
+                // colorFilter: ColorFilter.mode(
+                //   // ThemeHelper.whiteClr,
+                //   BlendMode.srcIn,
+                // ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
           ),
-          body: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 700),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Premium Greeting Card
-                    _buildGreetingCard(user, isEmailLogin),
-                    const SizedBox(height: 32),
+          body: SingleChildScrollView(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Premium Greeting Card
+                      _buildGreetingCard(user, isEmailLogin),
+                      const SizedBox(height: 32),
 
-                    // Account Settings Section
-                    _buildSectionHeader('Account Details'),
-                    const SizedBox(height: 16),
-
-                    _buildSettingsCard(
-                      child: Column(
-                        children: [
-                          _buildTextField(
-                            label: 'Username',
-                            controller: _usernameController,
-                            hint: 'Enter your name',
-                            icon: Icons.person_outline,
-                            errorText: controller.usernameError,
-                            onChanged: controller.validateUsername,
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: Obx(
-                              () => _buildActionButton(
-                                label: 'Update Username',
-                                onPressed: () => _updateUsername(controller)
-                                    .then((value) async {
-                                      user = await UserStore.getUser();
-                                      setState(() {});
-                                    }),
-                                isLoading: controller.isUserNameLoading,
-                                color: ThemeHelper.lightBlueClr,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    if (!isEmailLogin) ...[
-                      const SizedBox(height: 24),
-                      _buildSectionHeader('Change Password'),
+                      // Account Settings Section
+                      _buildSectionHeader('Account Details'),
                       const SizedBox(height: 16),
+
                       _buildSettingsCard(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (!_showPasswordFields)
-                              SizedBox(
-                                width: double.infinity,
-                                child: _buildActionButton(
-                                  label: 'Change Password',
-                                  onPressed: () => setState(
-                                    () => _showPasswordFields = true,
-                                  ),
-                                  color: ThemeHelper.lightPinkClr,
-                                  icon: Icons.lock_outline,
-                                ),
-                              )
-                            else ...[
-                              _buildTextField(
-                                label: 'New Password',
-                                controller: _passwordController,
-                                hint: 'Minimum 6 characters',
-                                icon: Icons.lock_outline,
-                                obscureText: !_showPassword,
-                                toggleObscure: () => setState(
-                                  () => _showPassword = !_showPassword,
-                                ),
-                                onChanged: (v) =>
-                                    controller.validatePassword(v),
-                                errorText: controller.passwordError,
-                              ),
-                              const SizedBox(height: 16),
-                              _buildTextField(
-                                label: 'Confirm Password',
-                                controller: _confirmPasswordController,
-                                hint: 'Repeat new password',
-                                icon: Icons.lock_reset,
-                                obscureText: !_showConfirmPassword,
-                                toggleObscure: () => setState(
-                                  () => _showConfirmPassword =
-                                      !_showConfirmPassword,
-                                ),
-                                onChanged: (v) =>
-                                    controller.validateConfirmPassword(
-                                      _passwordController.text,
-                                      v,
-                                    ),
-                                errorText: controller.confirmPasswordError,
-                              ),
-                              const SizedBox(height: 20),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildActionButton(
-                                      label: 'Cancel',
-                                      onPressed: () => setState(() {
-                                        _showPasswordFields = false;
-                                        _passwordController.clear();
-                                        _confirmPasswordController.clear();
+                            _buildTextField(
+                              label: 'Username',
+                              controller: _usernameController,
+                              hint: 'Enter your name',
+                              icon: Icons.person_outline,
+                              errorText: controller.usernameError,
+                              onChanged: controller.validateUsername,
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: Obx(
+                                () => _buildActionButton(
+                                  label: 'Update Username',
+                                  onPressed: () => _updateUsername(controller)
+                                      .then((value) async {
+                                        user = await UserStore.getUser();
+                                        setState(() {});
                                       }),
-                                      color: Colors.grey.withOpacity(0.2),
-                                      textColor: ThemeHelper.whiteClr,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Obx(
-                                      () => _buildActionButton(
-                                        label: 'Save',
-                                        onPressed: () =>
-                                            _updatePassword(controller),
-                                        isLoading: controller.isPasswordLoading,
-                                        color: ThemeHelper.lightGreenClr,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                  isLoading: controller.isUserNameLoading,
+                                  color: ThemeHelper.lightBlueClr,
+                                ),
                               ),
-                            ],
+                            ),
                           ],
                         ),
                       ),
-                    ],
 
-                    const SizedBox(height: 32),
-                    _buildSectionHeader('Appearance'),
-                    const SizedBox(height: 16),
-                    _buildSettingsCard(
-                      child: Column(
-                        children: [
-                          Row(
+                      if (!isEmailLogin) ...[
+                        const SizedBox(height: 24),
+                        _buildSectionHeader('Change Password'),
+                        const SizedBox(height: 16),
+                        _buildSettingsCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: _buildThemeOption(
-                                  label: 'Light',
-                                  icon: Icons.wb_sunny_outlined,
-                                  isActive: !isDark,
-                                  onTap: () {
-                                    ThemeHelper.isDarkModeNotifier.value =
-                                        false;
-                                    _saveThemePreference(false);
-                                  },
+                              if (!_showPasswordFields)
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: _buildActionButton(
+                                    label: 'Change Password',
+                                    onPressed: () => setState(
+                                      () => _showPasswordFields = true,
+                                    ),
+                                    color: ThemeHelper.lightPinkClr,
+                                    icon: Icons.lock_outline,
+                                  ),
+                                )
+                              else ...[
+                                _buildTextField(
+                                  label: 'New Password',
+                                  controller: _passwordController,
+                                  hint: 'Minimum 6 characters',
+                                  icon: Icons.lock_outline,
+                                  obscureText: !_showPassword,
+                                  toggleObscure: () => setState(
+                                    () => _showPassword = !_showPassword,
+                                  ),
+                                  onChanged: (v) =>
+                                      controller.validatePassword(v),
+                                  errorText: controller.passwordError,
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildThemeOption(
-                                  label: 'Dark',
-                                  icon: Icons.nights_stay_outlined,
-                                  isActive: isDark,
-                                  onTap: () {
-                                    ThemeHelper.isDarkModeNotifier.value = true;
-                                    _saveThemePreference(true);
-                                  },
+                                const SizedBox(height: 16),
+                                _buildTextField(
+                                  label: 'Confirm Password',
+                                  controller: _confirmPasswordController,
+                                  hint: 'Repeat new password',
+                                  icon: Icons.lock_reset,
+                                  obscureText: !_showConfirmPassword,
+                                  toggleObscure: () => setState(
+                                    () => _showConfirmPassword =
+                                        !_showConfirmPassword,
+                                  ),
+                                  onChanged: (v) =>
+                                      controller.validateConfirmPassword(
+                                        _passwordController.text,
+                                        v,
+                                      ),
+                                  errorText: controller.confirmPasswordError,
                                 ),
-                              ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildActionButton(
+                                        label: 'Cancel',
+                                        onPressed: () => setState(() {
+                                          _showPasswordFields = false;
+                                          _passwordController.clear();
+                                          _confirmPasswordController.clear();
+                                        }),
+                                        color: Colors.grey.withOpacity(0.2),
+                                        textColor: ThemeHelper.whiteClr,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Obx(
+                                        () => _buildActionButton(
+                                          label: 'Save',
+                                          onPressed: () =>
+                                              _updatePassword(controller),
+                                          isLoading:
+                                              controller.isPasswordLoading,
+                                          color: ThemeHelper.lightGreenClr,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
-                        ],
+                        ),
+                      ],
+
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('Appearance'),
+                      const SizedBox(height: 16),
+                      _buildSettingsCard(
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildThemeOption(
+                                    label: 'Light',
+                                    icon: Icons.wb_sunny_outlined,
+                                    isActive: !isDark,
+                                    onTap: () {
+                                      ThemeHelper.isDarkModeNotifier.value =
+                                          false;
+                                      _saveThemePreference(false);
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildThemeOption(
+                                    label: 'Dark',
+                                    icon: Icons.nights_stay_outlined,
+                                    isActive: isDark,
+                                    onTap: () {
+                                      ThemeHelper.isDarkModeNotifier.value =
+                                          true;
+                                      _saveThemePreference(true);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 40),
-                  ],
+
+                      const SizedBox(height: 32),
+                      _buildSectionHeader('Danger Zone'),
+                      const SizedBox(height: 16),
+                      _buildSettingsCard(
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: Obx(
+                                () => _buildActionButton(
+                                  label: 'Delete Account',
+                                  onPressed: () => _showDeleteConfirmation(),
+                                  isLoading: controller.isDeleteLoading,
+                                  color: const Color(0xFFEF4444),
+                                  icon: Icons.delete_outline,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'This action cannot be undone. All your data will be permanently deleted.',
+                              style: TextStyle(
+                                color: ThemeHelper.whiteClr.withOpacity(0.5),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
               ),
             ),

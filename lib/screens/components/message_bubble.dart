@@ -173,7 +173,7 @@ class _AssistantMessageBubble extends StatelessWidget {
                       vertical: 14,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.transparent,
+                      color: ThemeHelper.messageBgClr,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(18),
                         topRight: Radius.circular(18),
@@ -205,11 +205,8 @@ class _AssistantMessageBubble extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 10),
       decoration: BoxDecoration(
-        border: const Border(
-          left: BorderSide(
-            color: Color(0xFFD4A843), // gold
-            width: 3,
-          ),
+        border: Border(
+          left: BorderSide(color: ThemeHelper.yellowClr, width: 3),
         ),
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
@@ -231,12 +228,12 @@ class _AssistantMessageBubble extends StatelessWidget {
           // Header
           Row(
             children: [
-              const Icon(Icons.gavel, color: Color(0xFFD4A843), size: 18),
+              Icon(Icons.gavel, color: ThemeHelper.yellowClr, size: 18),
               const SizedBox(width: 8),
               Text(
                 'RELEVANT JUDICIAL PRECEDENT',
                 style: TextStyle(
-                  color: const Color(0xFFD4A843),
+                  color: ThemeHelper.yellowClr,
                   fontWeight: FontWeight.w700,
                   fontSize: 11,
                   letterSpacing: 1.2,

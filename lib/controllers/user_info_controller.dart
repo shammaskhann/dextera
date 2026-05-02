@@ -10,6 +10,7 @@ import 'package:dextera/core/api_endpoint.dart' as api;
 class UserInfoController extends GetxController {
   final isUserNameLoading = false.obs;
   final isPasswordLoading = false.obs;
+  final isDeleteLoading = false.obs;
 
   final errorMessage = Rx<String?>(null);
   final successMessage = Rx<String?>(null);
@@ -197,6 +198,52 @@ class UserInfoController extends GetxController {
       log('Error updating password: $e');
       errorMessage.value = 'Error updating password: $e';
       isPasswordLoading.value = false;
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    isDeleteLoading.value = true;
+    errorMessage.value = null;
+    successMessage.value = null;
+
+    try {
+      // final token = TokenStore.token;
+      // if (token == null || token.isEmpty) {
+      //   errorMessage.value = 'No authentication token found';
+      //   isDeleteLoading.value = false;
+      //   return false;
+      // }
+
+      final response = await http
+          .post(
+            Uri.parse(api.deleteAccount),
+            headers: {
+              'Content-Type': 'application/json',
+              // 'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('Request timed out'),
+          );
+      isDeleteLoading.value = false;
+      if (response.statusCode == 200) {
+        // Clear local storage
+        await TokenStore.clear();
+        await UserStore.clear();
+        return true;
+      } else {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        errorMessage.value =
+            data['message'] ??
+            'Failed to delete account (${response.statusCode})';
+        return false;
+      }
+    } catch (e) {
+      log('Error deleting account: $e');
+      errorMessage.value = 'Error deleting account: $e';
+      isDeleteLoading.value = false;
       return false;
     }
   }

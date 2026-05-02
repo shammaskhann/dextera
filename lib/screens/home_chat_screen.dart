@@ -33,6 +33,7 @@ class HomeChatScreen extends StatefulWidget {
 class _HomeChatScreenState extends State<HomeChatScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _inputController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   final ChatRepository _chatRepository = ChatRepository();
@@ -43,6 +44,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   // Conversation state
   String? _currentConversationId;
   final List<ConversationSummary> _conversations = [];
+  List<ConversationSummary> _filteredConversations = [];
   bool _isLoadingConversations = false;
   bool _isLoadingChat = false;
   String? _deletingConversationId;
@@ -80,6 +82,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       CurvedAnimation(parent: _drawerAnimController, curve: Curves.easeInOut),
     );
 
+    _searchController.addListener(_filterConversations);
     _refreshConversations();
   }
 
@@ -87,6 +90,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   void dispose() {
     _chatSub?.cancel();
     _inputController.dispose();
+    _searchController.dispose();
     _scrollController.dispose();
     _drawerAnimController.dispose();
     super.dispose();
@@ -108,6 +112,21 @@ class _HomeChatScreenState extends State<HomeChatScreen>
         });
       }
     });
+  }
+
+  void _filterConversations() {
+    final query = _searchController.text.toLowerCase();
+    if (query.isEmpty) {
+      setState(() {
+        _filteredConversations = _conversations;
+      });
+    } else {
+      setState(() {
+        _filteredConversations = _conversations
+            .where((conv) => conv.title.toLowerCase().contains(query))
+            .toList();
+      });
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -291,6 +310,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   }
 
   Future<void> _loadConversation(String conversationId) async {
+    // Clear search when loading a conversation
+    _searchController.clear();
     setState(() {
       _isLoadingChat = true;
       _loadingConversationId = conversationId;
@@ -367,6 +388,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       setState(() {
         _deletingConversationId = null;
         _conversations.removeWhere((c) => c.id == conversationId);
+        _filterConversations();
         _conversationDocContexts.remove(conversationId);
         if (_currentConversationId == conversationId) {
           _currentConversationId = null;
@@ -405,6 +427,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
           _conversations[idx] = _conversations[idx].copyWith(
             title: updatedConvo.title,
           );
+          _filterConversations();
         }
       });
       _showAlert('Conversation renamed successfully', type: ChatAlertType.info);
@@ -515,6 +538,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       } else {
         _conversations[existingIdx] = summary;
       }
+      _filterConversations();
     });
   }
 
@@ -538,6 +562,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               ),
             ),
           );
+        _filterConversations();
       });
     } catch (e) {
       if (!mounted) return;
@@ -1269,7 +1294,10 @@ class _HomeChatScreenState extends State<HomeChatScreen>
   Widget _buildActiveChatState(bool isMobile, bool isTablet, bool isDesktop) {
     // On desktop, allow a slightly larger content width
     final horizontalPadding = isMobile ? 12.0 : (isTablet ? 24.0 : 40.0);
-
+    final width =
+        MediaQuery.of(context).size.width -
+        (isDesktop ? 360 : 0) -
+        horizontalPadding * 2;
     return Column(
       children: [
         // Messages list
@@ -1317,6 +1345,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               12,
             ),
             child: Container(
+              height: width * 0.12,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 boxShadow: [
@@ -1333,7 +1362,6 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               child: Row(
                 children: [
                   // PDF attachment button
-                  _roundIconButton(Icons.attach_file, _uploadPdf),
                   const SizedBox(width: 8),
                   Expanded(
                     child: ConstrainedBox(
@@ -1357,23 +1385,34 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  _isStreaming
-                      ? SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: whiteClr.withOpacity(0.6),
-                              ),
-                            ),
-                          ),
-                        )
-                      : _roundIconButton(Icons.send, _sendMessage),
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Row(
+                        children: [
+                          _roundIconButton(Icons.attach_file, _uploadPdf),
+                          const SizedBox(width: 8),
+                          _isStreaming
+                              ? SizedBox(
+                                  width: 44,
+                                  height: 44,
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: whiteClr.withOpacity(0.6),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : _roundIconButton(Icons.send, _sendMessage),
+                        ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -1443,15 +1482,18 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                         ? "assets/icons/logo-full.svg"
                         : "assets/icons/logo-full-light.svg",
                   ),
-                  GestureDetector(
-                    onTap: _closeDrawer,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: iconBoxClr,
-                        borderRadius: BorderRadius.circular(8),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: _closeDrawer,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: iconBoxClr,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.chevron_left, color: whiteClr),
                       ),
-                      child: Icon(Icons.chevron_left, color: whiteClr),
                     ),
                   ),
                 ],
@@ -1465,6 +1507,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                 iconAlignment: IconAlignment.end,
                 onPressed: () {
                   // reset state / new query
+                  _searchController.clear();
                   setState(() {
                     _messages.clear();
                     _inputController.clear();
@@ -1509,6 +1552,8 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextField(
+                  controller: _searchController,
+                  style: TextStyle(color: whiteClr),
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     prefixIcon: Icon(
@@ -1535,18 +1580,20 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     )
-                  : _conversations.isEmpty
+                  : _filteredConversations.isEmpty
                   ? Center(
                       child: Text(
-                        'No conversations yet',
+                        _searchController.text.isNotEmpty
+                            ? 'No conversations found'
+                            : 'No conversations yet',
                         style: TextStyle(color: whiteClr.withOpacity(0.54)),
                       ),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      itemCount: _conversations.length,
+                      itemCount: _filteredConversations.length,
                       itemBuilder: (context, index) {
-                        final conv = _conversations[index];
+                        final conv = _filteredConversations[index];
                         final isActive = conv.id == _currentConversationId;
                         final hasDocCtx = _conversationDocContexts.containsKey(
                           conv.id,
@@ -1678,11 +1725,11 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                 onPressed: () {
                   Navigator.of(context).pushNamed('/user-info');
                 },
-                icon: Icon(Icons.person_outline, color: Colors.white),
+                icon: Icon(Icons.person_outline, color: whiteClr),
                 label: Text(
                   'Profile Settings',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: whiteClr,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1692,7 +1739,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     horizontal: 16,
                     vertical: 20,
                   ),
-                  backgroundColor: ThemeHelper.lightBlueClr,
+                  backgroundColor: ThemeHelper.buttonBgClr,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1731,7 +1778,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                     horizontal: 16,
                     vertical: 20,
                   ),
-                  backgroundColor: ThemeHelper.lightBlueClr,
+                  backgroundColor: ThemeHelper.buttonBgClr,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
