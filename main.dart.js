@@ -48747,9 +48747,11 @@ r=g.c
 r.toString
 r=A.bm(r,f,t.w).w
 q=c?360:0
-p=g.f
-o=g.r.length
-p=A.eX(new A.by(new A.ah(s,0,s,0),A.aMV(A.aLD(p,new A.auK(g),o,B.JJ),p,!0),f))
+p=r.a.a-q-s*2
+q=g.f
+r=g.r.length
+r=A.eX(new A.by(new A.ah(s,0,s,0),A.aMV(A.aLD(q,new A.auK(g),r,B.JJ),q,!0),f))
+q=a?p*0.2:p*0.12
 o=$.bd()
 n=o.a?B.ck:B.cW
 n=A.b([new A.dv(1,B.bI,A.X(B.d.ae(127.5),n.m()>>>16&255,n.m()>>>8&255,n.m()&255),B.wu,10)],t.sq)
@@ -48767,7 +48769,7 @@ i=g.Gu(B.KJ,g.gV2())
 if(g.z){o=o.a?B.e:B.l
 o=A.bu(A.dP(A.bu(A.qw(A.X(153,o.m()>>>16&255,o.m()>>>8&255,o.m()&255),2,f),20,20),f,f),44,44)}else o=g.Gu(B.pP,g.gTa())
 m=t.p
-return A.cj(A.b([p,A.tr(!0,new A.by(new A.ah(s,12,s,12),A.bH(f,A.c4(A.b([B.cz,j,B.cz,A.cj(A.b([A.c4(A.b([i,B.cz,o],m),B.u,B.q,B.w,0)],m),B.u,B.dx,B.w)],m),B.u,B.q,B.w,0),B.n,f,f,new A.bE(l,f,f,k,n,f,B.J),f,(r.a.a-q-s*2)*0.12,f,B.hv,f,f,f),f),B.ap,!1)],m),B.u,B.q,B.w)},
+return A.cj(A.b([r,A.tr(!0,new A.by(new A.ah(s,12,s,12),A.bH(f,A.c4(A.b([B.cz,j,B.cz,A.cj(A.b([A.c4(A.b([i,B.cz,o],m),B.u,B.q,B.w,0)],m),B.u,B.dx,B.w)],m),B.u,B.q,B.w,0),B.n,f,f,new A.bE(l,f,f,k,n,f,B.J),f,q,f,B.hv,f,f,f),f),B.ap,!1)],m),B.u,B.q,B.w)},
 O5(){var s,r,q,p,o=this,n=null,m=$.bd(),l=m.a,k=l?B.cl:B.cm,j=A.fU(l?"assets/icons/logo-full.svg":"assets/icons/logo-full-light.svg",n,B.aQ,n,n),i=l?B.I4:B.Hy,h=A.bU(8),g=t.p
 h=A.c4(A.b([j,A.k5(A.hD(n,A.bH(n,A.dx(B.KM,l?B.e:B.l,n,n),B.n,n,n,new A.bE(i,n,n,h,n,n,B.J),n,n,n,B.p8,n,n,n),B.S,!1,n,n,n,n,n,n,n,n,n,n,n,n,n,o.gOB(),n,n,n,n,n,n),B.cA,n,n,n,n)],g),B.u,B.fn,B.w,0)
 l=m.a?B.ck:B.cW
