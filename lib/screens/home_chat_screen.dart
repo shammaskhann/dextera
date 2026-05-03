@@ -1345,7 +1345,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
               12,
             ),
             child: Container(
-              height: width * 0.12,
+              height: isMobile ? width * 0.2 : width * 0.12,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 boxShadow: [
