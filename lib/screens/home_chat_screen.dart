@@ -11,6 +11,7 @@ import 'package:dextera/screens/components/message_bubble.dart';
 import 'package:dextera/screens/components/gradient_text.dart';
 import 'package:dextera/screens/login_screen.dart';
 import 'package:dextera/utils/html_escape.dart';
+import 'package:dextera/utils/markdown_formatter.dart';
 import 'package:dextera/utils/token_store.dart';
 import 'package:dextera/utils/user_store.dart';
 import 'package:dextera/utils/snackbar_utils.dart';
@@ -922,19 +923,19 @@ class _HomeChatScreenState extends State<HomeChatScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFFD4A843).withOpacity(0.12),
-            const Color(0xFFD4A843).withOpacity(0.04),
+            ThemeHelper.yellowClr.withOpacity(0.12),
+            ThemeHelper.yellowClr.withOpacity(0.04),
           ],
         ),
         border: Border(
-          bottom: BorderSide(color: const Color(0xFFD4A843).withOpacity(0.2)),
+          bottom: BorderSide(color: ThemeHelper.yellowClr.withOpacity(0.2)),
         ),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.description_outlined,
-            color: Color(0xFFD4A843),
+            color: ThemeHelper.yellowClr,
             size: 18,
           ),
           const SizedBox(width: 8),
@@ -942,7 +943,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
             child: Text(
               'Answering based on $escapedName. RAG disabled.',
               style: TextStyle(
-                color: const Color(0xFFD4A843),
+                color: ThemeHelper.yellowClr,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -960,7 +961,7 @@ class _HomeChatScreenState extends State<HomeChatScreen>
             },
             child: Icon(
               Icons.close,
-              color: const Color(0xFFD4A843).withOpacity(0.6),
+              color: ThemeHelper.yellowClr.withOpacity(0.6),
               size: 18,
             ),
           ),
@@ -1183,13 +1184,9 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                       ),
                     ],
                   ),
-                  child: Text(
-                    _pendingDocumentSummary!,
-                    style: TextStyle(
-                      color: whiteClr.withOpacity(0.70),
-                      fontSize: 16,
-                      height: 1.5,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: formatMarkdownToWidgets(_pendingDocumentSummary!),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -1236,13 +1233,16 @@ class _HomeChatScreenState extends State<HomeChatScreen>
                                 );
                           }
 
+                          // Add document summary card (not plain text)
                           _messages.add(
                             ChatMessage(
-                              text:
-                                  '**Document Summary:**\n\n$_pendingDocumentSummary',
+                              text: _pendingDocumentSummary!,
                               isUser: false,
+                              messageType: 'document_summary',
+                              documentName: _pendingDocumentName,
                             ),
                           );
+                          // Add follow-up message
                           _messages.add(
                             ChatMessage(
                               text:

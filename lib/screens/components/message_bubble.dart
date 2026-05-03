@@ -8,6 +8,8 @@
 //  • Document summary cards with discuss button state management
 //  • Entry animations
 // ─────────────────────────────────────────────────────────────────────────────
+import 'dart:math' as Math;
+
 import 'package:dextera/models/chat_message.dart';
 import 'package:dextera/utils/markdown_formatter.dart';
 import 'package:dextera/utils/html_escape.dart';
@@ -312,7 +314,10 @@ class _DocumentSummaryCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [const Color(0xFF2B3141), const Color(0xFF383E51)],
+                    colors: [
+                      ThemeHelper.lightPinkClr.withOpacity(0.1),
+                      ThemeHelper.lightPinkClr.withOpacity(0.05),
+                    ],
                   ),
                 ),
                 child: Row(
@@ -322,13 +327,13 @@ class _DocumentSummaryCard extends StatelessWidget {
                       width: 30,
                       height: 30,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD4A843).withOpacity(0.15),
+                        color: ThemeHelper.yellowClr.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Icon(
                           Icons.description_outlined,
-                          color: Color(0xFFD4A843),
+                          color: ThemeHelper.yellowClr,
                           size: 20,
                         ),
                       ),
@@ -495,39 +500,21 @@ class TypingIndicator extends StatefulWidget {
 
 class _TypingIndicatorState extends State<TypingIndicator>
     with TickerProviderStateMixin {
-  late final List<AnimationController> _controllers;
-  late final List<Animation<double>> _animations;
+  late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(3, (i) {
-      return AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 600),
-      )..repeat(reverse: true);
-    });
-
-    // Stagger the start of each dot
-    for (int i = 0; i < _controllers.length; i++) {
-      Future.delayed(Duration(milliseconds: i * 160), () {
-        if (mounted) _controllers[i].forward();
-      });
-    }
-
-    _animations = _controllers.map((c) {
-      return Tween<double>(
-        begin: 0,
-        end: -8,
-      ).animate(CurvedAnimation(parent: c, curve: Curves.easeInOut));
-    }).toList();
+    // Increase duration slightly for a smoother "wave" feel
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
   }
 
   @override
   void dispose() {
-    for (final c in _controllers) {
-      c.dispose();
-    }
+    _controller.dispose();
     super.dispose();
   }
 
@@ -540,31 +527,31 @@ class _TypingIndicatorState extends State<TypingIndicator>
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: const BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(18),
-                topRight: Radius.circular(18),
-                bottomLeft: Radius.circular(4),
-                bottomRight: Radius.circular(18),
-              ),
-            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: List.generate(3, (i) {
                 return AnimatedBuilder(
-                  animation: _animations[i],
+                  animation: _controller,
                   builder: (context, child) {
+                    // Use a sine wave to create the "up and down" motion
+                    // (i * 0.4) creates the offset delay between balls
+                    double radians =
+                        (_controller.value * 2 * 3.14159) - (i * 0.8);
+                    double bounce = Math.sin(radians);
+
+                    // We only want them to bounce "up", so we clamp the floor
+                    // and amplify the height.
+                    double yOffset = bounce < 0 ? bounce * 8 : 0;
+
                     return Transform.translate(
-                      offset: Offset(0, _animations[i].value),
+                      offset: Offset(0, yOffset),
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 3),
                         width: 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: whiteClr.withOpacity(
-                            0.6 + 0.4 * (_animations[i].value / -8).abs(),
-                          ),
+                          // Opacity also shifts with the bounce for depth
+                          color: whiteClr.withOpacity(bounce < 0 ? 1.0 : 0.4),
                           shape: BoxShape.circle,
                         ),
                       ),
