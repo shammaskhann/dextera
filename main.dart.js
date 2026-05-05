@@ -49107,35 +49107,36 @@ s=r.Q
 if(s!=null)r.cy.F(0,s)},
 $S:0}
 A.auY.prototype={
-$2(a,b){var s,r,q,p,o,n,m,l,k=this,j=null,i=$.bd(),h=i.a?"assets/icons/logo-D.svg":"assets/icons/logo-D-dark.svg",g=k.b,f=g?70:86
+$2(a,b){var s,r,q,p,o,n,m,l,k,j=null,i=$.bd(),h=i.a?"assets/icons/logo-D.svg":"assets/icons/logo-D-dark.svg",g=this.b,f=g?70:86
 h=A.fU(h,j,B.aQ,g?70:86,f)
 f=A.b([B.jP,B.jy],t.d)
 f=A.aGc("How can I assist you?",new A.ha(B.bd,B.bV,B.aJ,f,j,j),A.aI(j,j,j,j,j,j,j,j,j,j,j,g?20:22,j,j,B.aT,j,j,!0,j,j,j,j,j,j,j,j))
-g=g?72:k.c*0.14
-s=i.a?B.cl:B.cm
-r=A.bU(18)
-q=A.b([new A.dv(0,B.bI,A.X(B.d.ae(76.5),B.m.m()>>>16&255,B.m.m()>>>8&255,B.m.m()&255),B.QJ,36)],t.sq)
-p=k.a
-o=A.aI(j,j,i.a?B.e:B.l,j,j,j,j,j,j,j,j,j,j,j,j,j,j,!0,j,j,j,j,j,j,j,j)
-if(p.db){n=p.cy.i(0,p.Q)
-n=n==null?j:n.a
-n="Ask about '"+(n==null?"document":n)+"'..."}else n="Write your legal query here"
-m=i.a?B.e:B.l
-l=t.p
-g=A.bH(j,A.c4(A.b([A.eX(A.tR(j,B.bP,!1,j,!0,B.N,j,A.zy(),p.d,j,j,j,j,j,2,A.ok(j,B.dK,j,j,j,j,j,j,!0,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,A.aI(j,j,A.X(138,m.m()>>>16&255,m.m()>>>8&255,m.m()&255),j,j,j,j,j,j,j,j,j,j,j,j,j,j,!0,j,j,j,j,j,j,j,j),n,j,j,j,j,j,j,j,j,j,!0,!0,j,j,j,j,j,j,j,j,j,j,j,j,j,j),B.S,!0,j,!0,j,!1,j,B.bE,j,j,j,j,j,j,j,j,4,1,j,!1,"\u2022",j,j,j,new A.auX(p),j,!1,j,j,!1,j,!0,j,B.bO,j,j,j,j,j,j,j,j,j,j,j,o,!0,B.ad,j,B.d6,j,j,j,j)),B.Ba,p.Gu(B.pP,p.gTa())],l),B.u,B.q,B.w,0),B.n,j,j,new A.bE(s,j,j,r,q,j,B.J),j,g,B.JU,B.JT,j,j,k.c)
-s=i.a?B.e:B.l
-s=A.bH(j,j,B.n,A.X(61,s.m()>>>16&255,s.m()>>>8&255,s.m()&255),j,j,j,1,j,j,j,j,60)
+s=this.c
+g=g?s*0.26:s*0.14
+r=i.a?B.cl:B.cm
+q=A.bU(18)
+p=A.b([new A.dv(0,B.bI,A.X(B.d.ae(76.5),B.m.m()>>>16&255,B.m.m()>>>8&255,B.m.m()&255),B.QJ,36)],t.sq)
+o=this.a
+n=A.aI(j,j,i.a?B.e:B.l,j,j,j,j,j,j,j,j,j,j,j,j,j,j,!0,j,j,j,j,j,j,j,j)
+if(o.db){m=o.cy.i(0,o.Q)
+m=m==null?j:m.a
+m="Ask about '"+(m==null?"document":m)+"'..."}else m="Write your legal query here"
+l=i.a?B.e:B.l
+k=t.p
+s=A.bH(j,A.c4(A.b([A.eX(A.tR(j,B.bP,!1,j,!0,B.N,j,A.zy(),o.d,j,j,j,j,j,2,A.ok(j,B.dK,j,j,j,j,j,j,!0,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,j,A.aI(j,j,A.X(138,l.m()>>>16&255,l.m()>>>8&255,l.m()&255),j,j,j,j,j,j,j,j,j,j,j,j,j,j,!0,j,j,j,j,j,j,j,j),m,j,j,j,j,j,j,j,j,j,!0,!0,j,j,j,j,j,j,j,j,j,j,j,j,j,j),B.S,!0,j,!0,j,!1,j,B.bE,j,j,j,j,j,j,j,j,4,1,j,!1,"\u2022",j,j,j,new A.auX(o),j,!1,j,j,!1,j,!0,j,B.bO,j,j,j,j,j,j,j,j,j,j,j,n,!0,B.ad,j,B.d6,j,j,j,j)),B.Ba,o.Gu(B.pP,o.gTa())],k),B.u,B.q,B.w,0),B.n,j,j,new A.bE(r,j,j,q,p,j,B.J),j,g,B.JU,B.JT,j,j,s)
+g=i.a?B.e:B.l
+g=A.bH(j,j,B.n,A.X(61,g.m()>>>16&255,g.m()>>>8&255,g.m()&255),j,j,j,1,j,j,j,j,60)
 r=i.a?B.e:B.l
 r=A.aV("OR",j,j,j,A.aI(j,j,A.X(138,r.m()>>>16&255,r.m()>>>8&255,r.m()&255),j,j,j,j,j,j,j,j,j,j,j,B.a5,j,j,!0,j,j,j,j,j,j,j,j),j,j)
 q=i.a?B.e:B.l
-q=A.c4(A.b([s,new A.by(B.p2,r,j),A.bH(j,j,B.n,A.X(61,q.m()>>>16&255,q.m()>>>8&255,q.m()&255),j,j,j,1,j,j,j,j,60)],l),B.u,B.bB,B.w,0)
+q=A.c4(A.b([g,new A.by(B.p2,r,j),A.bH(j,j,B.n,A.X(61,q.m()>>>16&255,q.m()>>>8&255,q.m()&255),j,j,j,1,j,j,j,j,60)],k),B.u,B.bB,B.w,0)
 r=A.bU(16)
 i=i.a
-s=i?B.cl:B.cm
-o=A.bU(16)
+g=i?B.cl:B.cm
+p=A.bU(16)
 n=A.jL(B.ck,1.5)
 m=A.dx(B.KU,i?B.e:B.l,j,j)
-return A.tJ(new A.ea(new A.a5(0,1/0,b.d,1/0),A.dP(new A.by(B.JK,A.cj(A.b([h,B.US,f,B.UR,g,B.es,q,B.iK,A.mA(!1,r,!0,A.bH(j,A.c4(A.b([m,B.cy,A.aV("Summarize a Document",j,j,j,A.aI(j,j,i?B.e:B.l,j,j,j,j,j,j,j,j,16,j,j,B.Q,j,j,!0,j,j,j,j,j,j,j,j),j,j)],l),B.u,B.q,B.aF,0),B.n,j,j,new A.bE(s,j,n,o,j,j,B.J),j,j,j,B.p6,j,j,j),j,!0,j,j,j,j,j,j,j,j,p.gV2(),j,j,j,j,j)],l),B.u,B.bB,B.aF),j),j,j),j),j,B.nf)},
+return A.tJ(new A.ea(new A.a5(0,1/0,b.d,1/0),A.dP(new A.by(B.JK,A.cj(A.b([h,B.US,f,B.UR,s,B.es,q,B.iK,A.mA(!1,r,!0,A.bH(j,A.c4(A.b([m,B.cy,A.aV("Summarize a Document",j,j,j,A.aI(j,j,i?B.e:B.l,j,j,j,j,j,j,j,j,16,j,j,B.Q,j,j,!0,j,j,j,j,j,j,j,j),j,j)],k),B.u,B.q,B.aF,0),B.n,j,j,new A.bE(g,j,n,p,j,j,B.J),j,j,j,B.p6,j,j,j),j,!0,j,j,j,j,j,j,j,j,o.gV2(),j,j,j,j,j)],k),B.u,B.bB,B.aF),j),j,j),j),j,B.nf)},
 $S:275}
 A.auX.prototype={
 $1(a){return this.a.qv()},
